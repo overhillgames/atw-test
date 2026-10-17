@@ -1,0 +1,589 @@
+/* ============================================================
+   JON THEME: battle
+   The in-battle DOM in the Jon grammar (ltw-battle-2d-juice piece C): the Ready and Pause buttons, the slot
+   outlines, the drag ghost and the match-end card. The panels, dock and cards of the battle are Pixi
+   (www/game/18a-pixi-chrome.js). Same tiles and fonts as jon-chrome.css, whose button rules are scoped to
+   the menu screens, so the three rules the battle needs are repeated here. Loaded after style.css.
+   Nothing moves or changes on :hover (no transform, no filter): the press is a slight fade.
+   ============================================================ */
+
+/* one logical px of the 420 x 760 safe frame: the Pixi scene scales with the frame, so the DOM parts do too */
+#game-screen {
+  --jon-u: calc(var(--pixi-safe-width) / 420);
+}
+
+/* ------------------------------------------------------------
+   Ready (blue, the one action) and Pause (paper). Geometry lives here, not in style.css.
+   ------------------------------------------------------------ */
+
+#game-screen .ready-btn,
+#game-screen .floating-pause-btn {
+  position: absolute;
+  z-index: 30;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  /* the caption is centred over the whole button rect, as the Godot board's Label: when the word is wider or taller
+     than the content box (inside the border-image border) the track overflows both ways, not to the right and down */
+  place-content: center;
+  height: calc(var(--jon-u) * 38);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: calc(var(--jon-u) * 12) solid transparent;
+  border-radius: 12px;
+  background: none;
+  box-shadow: none;
+  font-family: var(--pack-font-head, var(--jon-font-head));
+  font-size: calc(var(--jon-u) * 16);
+  font-weight: 400;
+  /* the line box is the face's ascent + descent, Godot's line box, centred in the rect */
+  line-height: normal;
+  text-transform: none;
+  white-space: nowrap;
+  pointer-events: auto;
+  /* pack.json hud.text outline: Godot's ring is outline width / 4 outside the glyphs; the stroke is centred on the
+     glyph edge, so it is half the outline width, painted under the fill */
+  paint-order: stroke fill;
+}
+
+/* Ready sits directly under the left column (ROUND/TIME panel, Pixi, x 4, 60 wide, ink bottom 424) and Pause
+   under the right column, same row (y 427), each reading as part of its column; Ready is styled like the main menu's Play Match: blue slab, Patrick Hand, ink text with a thin outline.
+   The caption's size, colour and outline come from pack.json hud.text.ready|pause (applyPackDom's --pack-ready-* / --pack-pause-*) */
+#game-screen .ready-btn {
+  left: calc(var(--safe-frame-x) + var(--jon-u) * var(--pack-ready-x, 5));
+  top: calc(var(--safe-frame-y) + var(--jon-u) * var(--pack-ready-y, 427));
+  width: calc(var(--jon-u) * var(--pack-ready-w, 54));
+  height: calc(var(--jon-u) * var(--pack-ready-h, 37));
+  border-width: calc(var(--jon-u) * 8);
+  /* the frame is drawn the way the Godot board draws it (applyPackDom's --pack-ready-edge / -slice / -outset-*,
+     godotNinePatchFrame): every edge is the piece's inset in game px, sliced at inset x ui.scale texels of the pack tile,
+     and the frame grows right / down to Godot's minimum size (2 x inset per axis) through the outset, so the box, hit
+     area and caption keep the button rect. Fallbacks: the 2x Jon packs' (inset 20, 54 x 37); the 1x Jon fallback image
+     would be sliced at 2x (cosmetic, never shown: applyPackDom runs first) */
+  border-image-source: var(--pack-btn-main, var(--jon-btn-blue));
+  border-image-slice: var(--pack-ready-slice, 40) fill;
+  border-image-width: calc(var(--jon-u) * var(--pack-ready-edge, 20));
+  border-image-outset: 0 calc(var(--jon-u) * var(--pack-ready-outset-r, 0)) calc(var(--jon-u) * var(--pack-ready-outset-b, 3)) 0;
+  border-image-repeat: stretch;
+  font-family: var(--pack-font-head, var(--jon-font-head));
+  font-size: calc(var(--jon-u) * var(--pack-ready-font-size, 15));
+  color: var(--pack-ready-color, var(--pack-ink, var(--jon-ink)));
+  -webkit-text-stroke: calc(var(--jon-u) * var(--pack-ready-outline-w, 0.5) * 0.5) var(--pack-ready-outline-color, var(--pack-ink, var(--jon-ink)));
+}
+
+/* the pack paints the Ready button into its own layer: the DOM button is only a touch area on top of it */
+html.pack-ready-layer #ready-btn {
+  border-image: none;
+  background: transparent;
+  color: transparent;
+  -webkit-text-stroke-color: transparent;
+  box-shadow: none;
+}
+
+#game-screen .floating-pause-btn {
+  left: calc(var(--safe-frame-x) + var(--jon-u) * var(--pack-pause-x, 359));
+  top: calc(var(--safe-frame-y) + var(--jon-u) * var(--pack-pause-y, 427));
+  width: calc(var(--jon-u) * var(--pack-pause-w, 54));
+  height: calc(var(--jon-u) * var(--pack-pause-h, 37));
+  border-width: calc(var(--jon-u) * 8);
+  /* the frame drawn the way the Godot board draws it, as Ready's (--pack-pause-edge / -slice / -outset-*) */
+  border-image-source: var(--pack-btn-sub, var(--jon-btn-paper));
+  border-image-slice: var(--pack-pause-slice, 40) fill;
+  border-image-width: calc(var(--jon-u) * var(--pack-pause-edge, 20));
+  border-image-outset: 0 calc(var(--jon-u) * var(--pack-pause-outset-r, 0)) calc(var(--jon-u) * var(--pack-pause-outset-b, 3)) 0;
+  border-image-repeat: stretch;
+  font-size: calc(var(--jon-u) * var(--pack-pause-font-size, 15));
+  color: var(--pack-pause-color, var(--pack-ink, var(--jon-ink)));
+  -webkit-text-stroke: calc(var(--jon-u) * var(--pack-pause-outline-w, 0) * 0.5) var(--pack-pause-outline-color, var(--pack-ink, var(--jon-ink)));
+}
+
+#game-screen .ready-btn[hidden],
+#game-screen .floating-pause-btn[hidden] {
+  display: none;
+}
+
+#game-screen .ready-btn:active,
+#game-screen .floating-pause-btn:active {
+  opacity: 0.88;
+}
+
+/* ------------------------------------------------------------
+   Slots: the drop feedback is ink and blue, like the cards' selected stroke
+   ------------------------------------------------------------ */
+
+.tower-slot.over {
+  outline: 2px dashed var(--pack-ink, var(--jon-ink));
+  outline-offset: -4px;
+}
+
+.tower-slot.placement-target {
+  border-color: transparent;
+  box-shadow: 0 0 0 3px var(--pack-accent, var(--jon-blue));
+}
+
+.pixi-drag-ghost {
+  opacity: 0.7;
+}
+
+/* ------------------------------------------------------------
+   Match-end card: a panel with the menu's buttons
+   ------------------------------------------------------------ */
+
+.match-end-overlay {
+  background: rgba(40, 30, 20, 0.35);
+  backdrop-filter: none;
+  /* the card stays inset above the dock (its top frame is at y 587): bottom cap at y 575, scroll inside the card */
+  box-sizing: border-box;
+  padding: calc(var(--jon-u) * 12) calc(var(--jon-u) * 15) calc(var(--jon-u) * 185);
+}
+
+.match-summary-card {
+  padding: 0;
+  border: 28px solid transparent;
+  border-image: var(--pack-panel, var(--jon-frame-panel)) 56 fill / 28px stretch; /* 2x pack tile (384); 1x fallback sliced at 2x is cosmetic only */
+  border-radius: 16px;
+  background: none;
+  box-shadow: none;
+  color: var(--pack-ink, var(--jon-ink));
+  font-family: var(--pack-font-body, "Trebuchet MS", sans-serif); /* body sans, as the menus inherit it */
+  max-height: 100%;
+  image-rendering: auto;
+}
+
+.match-summary-card .eyebrow {
+  margin: 0;
+  color: var(--pack-muted, var(--jon-muted));
+  font-family: var(--pack-font-head, var(--jon-font-head));
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.match-summary-card h2 {
+  margin: 0;
+  color: var(--pack-ink, var(--jon-ink));
+  font-family: var(--pack-font-head, var(--jon-font-head));
+  font-size: clamp(2rem, 8vw, 2.4rem);
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.match-summary-card .match-result-copy,
+.match-summary-card .match-next-goal {
+  color: var(--pack-muted, var(--jon-muted));
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.match-summary-card .match-summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.2rem 0.5rem;
+  margin: 0.6rem 0;
+}
+
+.match-summary-card .match-stat {
+  padding: 0.1rem 0.3rem;
+  border: 14px solid transparent;
+  border-image: var(--pack-card, var(--jon-frame-card)) 40 fill / 14px stretch;
+  border-radius: 12px;
+  background: none;
+  text-align: left;
+}
+
+/* values bold sans, labels sans, left-aligned like the Records cards */
+.match-summary-card .match-stat strong {
+  color: var(--pack-ink, var(--jon-ink));
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.match-summary-card .match-stat span {
+  margin-top: 0;
+  color: var(--pack-muted, var(--jon-muted));
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.match-actions {
+  gap: 0.2rem 0.6rem;
+  justify-content: center;
+}
+
+#game-screen .match-actions button,
+#game-screen .pause-actions button {
+  flex: 1 1 8rem;
+  min-height: 60px;
+  padding: 0 0.1rem;
+  border: 10px solid transparent;
+  border-image: var(--pack-btn-main, var(--jon-btn-blue)) 40 fill / 10px stretch;
+  border-radius: 12px;
+  background: none;
+  box-shadow: none;
+  color: var(--pack-ink, var(--jon-ink));
+  font-family: var(--pack-font-head, var(--jon-font-head));
+  font-size: 1.45rem; /* the main menu's Play Match look (Patrick Hand 400, ink, 0.5px stroke, 10px edge), sized to fill a half-width button */
+  font-weight: 400;
+  line-height: 1.1;
+  -webkit-text-stroke: 0.5px var(--pack-ink, var(--jon-ink));
+  text-shadow: none;
+  image-rendering: auto;
+}
+
+#game-screen .match-actions button.secondary,
+#game-screen .pause-actions button.secondary {
+  border-image: var(--pack-btn-sub, var(--jon-btn-paper)) 40 fill / 10px stretch;
+}
+
+#game-screen .match-actions button:disabled {
+  border-image: var(--pack-btn-sub, var(--jon-btn-paper)) 40 fill / 10px stretch;
+  color: var(--pack-muted, var(--jon-muted));
+  opacity: 1;
+}
+
+#game-screen .match-actions button:hover,
+#game-screen .match-actions button.secondary:hover,
+#game-screen .pause-actions button:hover,
+#game-screen .pause-actions button.secondary:hover {
+  background: none;
+}
+
+#game-screen .match-actions button:active:not(:disabled),
+#game-screen .pause-actions button:active:not(:disabled) {
+  opacity: 0.88;
+}
+
+/* ------------------------------------------------------------
+   Pause panel (solo): a paper card centred on the HUD midline (y 309) with Resume and Menu
+   ------------------------------------------------------------ */
+
+.pause-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 220; /* above the Ready/Pause buttons (30) and the Pixi canvas, same layer as the match-end overlay */
+  background: rgba(40, 30, 20, 0.35);
+  pointer-events: auto;
+}
+
+.pause-overlay.hidden {
+  display: none;
+}
+
+.pause-card {
+  position: absolute;
+  left: calc(var(--safe-frame-x) + var(--jon-u) * 66);
+  width: calc(var(--jon-u) * 288);
+  top: calc(var(--safe-frame-y) + var(--jon-u) * var(--pack-mid-y, 309));
+  transform: translateY(-50%);
+  box-sizing: border-box;
+  border: 28px solid transparent;
+  border-image: var(--pack-panel, var(--jon-frame-panel)) 56 fill / 28px stretch;
+  border-radius: 16px;
+  background: none;
+  text-align: center;
+  color: var(--pack-ink, var(--jon-ink));
+}
+
+.pause-card h2 {
+  margin: 0 0 0.4rem;
+  color: var(--pack-ink, var(--jon-ink));
+  font-family: var(--pack-font-head, var(--jon-font-head));
+  font-size: calc(var(--jon-u) * 28);
+  font-weight: 400;
+  line-height: 1.1;
+}
+
+.pause-actions {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+.quit-overlay { z-index: 230; } /* above the pause card (220) */
+
+.pause-card .quit-note {
+  margin: 0 0 0.6rem;
+  font-family: var(--pack-font-head, var(--jon-font-head));
+  font-size: calc(var(--jon-u) * 16);
+  font-weight: 400;
+  color: var(--pack-muted, var(--jon-muted));
+}
+
+/* ------------------------------------------------------------
+   Tug mode (www/game/tug/tug-mode.js, plan .plans/ltw-tug-mode.md). Tug uses only the pack's slot 0 and 1
+   diamonds, so slots 2, 3 and 4 of each side are hidden while body.mode-tug is set (createTowerSlots gives every
+   slot data-slot-index 0-4). Tug's dock, clock and gold chips, queue column and mob cards are drawn in Pixi by
+   www/game/tug/tug-pixi.js; the DOM rules below (plan .plans/ltw-tug-hud-2a.md, design handoff frames D-G, rects in
+   logical px of the 420 x 760 safe frame, origin top-left, written as safe-frame offset + --jon-u * N):
+   - Pause: a 44 x 44 icon button at 366,10 (buttonSub piece, 20-unit edge); the caption stays in the DOM but is
+     invisible (font-size 0, transparent) and two ink bars 5 x 16 units, gap 5, radius 2 are drawn with ::before / ::after.
+   - Pause and quit dialogs: a 300 x 276 panel at 60,254, no transform, over a paper wash (0.78; when the quit dialog opens
+     over the pause dialog its own wash is transparent so the wash is not doubled). The panel frame is a ::before so the
+     children can be placed absolutely at exact offsets from the card, whatever the font metrics: h2 (Caveat, 46 / 40) box
+     top 282 h 46, the tug-mode.js line (class tug-dialog-line, head 16 muted) box top 338 h 16, and two 240 x 56 buttons
+     stacked at 90,378 and 90,446 (pause: Resume buttonMain 24, Quit buttonSub 22; quit: Yes buttonSub 22, No buttonMain 24).
+   - Match end: a 300 x 322 panel at 60,214 over a 0.84 wash; eyebrow and stats grid hidden; h2 Caveat 60 box top 242 h 60,
+     result line head 22 ink top 314 h 22, next-goal line head 16 muted top 344 h 16, Play Again buttonMain 24 at 90,384,
+     Return to Menu buttonSub 22 at 90,452. Continue keeps its .hidden class (display: none !important).
+   All text is weight 400, centred and on one line. Nothing changes on :hover.
+   ------------------------------------------------------------ */
+
+body.mode-tug .tower-slot:is([data-slot-index="2"], [data-slot-index="3"], [data-slot-index="4"]) {
+  display: none;
+}
+
+/* Pause: 44 x 44 icon button at 366,10; the word "Pause" stays in the DOM but is not drawn */
+body.mode-tug #game-screen .floating-pause-btn {
+  left: calc(var(--safe-frame-x) + var(--jon-u) * 366);
+  top: calc(var(--safe-frame-y) + var(--jon-u) * 10);
+  width: calc(var(--jon-u) * 44);
+  height: calc(var(--jon-u) * 44);
+  border: calc(var(--jon-u) * 20) solid transparent;
+  border-image: var(--pack-btn-sub, var(--jon-btn-paper)) 40 fill / calc(var(--jon-u) * 20) stretch;
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+  -webkit-text-stroke: 0;
+}
+
+body.mode-tug #game-screen .floating-pause-btn::before,
+body.mode-tug #game-screen .floating-pause-btn::after {
+  content: "";
+  position: absolute;
+  top: calc(50% - var(--jon-u) * 8);
+  width: calc(var(--jon-u) * 5);
+  height: calc(var(--jon-u) * 16);
+  border-radius: calc(var(--jon-u) * 2);
+  background: var(--pack-ink, var(--jon-ink));
+}
+
+body.mode-tug #game-screen .floating-pause-btn::before {
+  left: calc(50% - var(--jon-u) * 7.5);
+}
+
+body.mode-tug #game-screen .floating-pause-btn::after {
+  left: calc(50% + var(--jon-u) * 2.5);
+}
+
+/* washes: paper over the lane; the quit dialog opened over the pause dialog adds none of its own */
+body.mode-tug .pause-overlay {
+  background: rgba(240, 224, 200, 0.78);
+}
+
+body.mode-tug #pause-overlay:not(.hidden) ~ #quit-overlay {
+  background: transparent;
+}
+
+body.mode-tug .match-end-overlay {
+  box-sizing: border-box;
+  padding: 0;
+  background: rgba(240, 224, 200, 0.84);
+}
+
+/* the three panels: an absolute card at its rect, the frame on ::before (behind the children), no padding or border on the
+   card, so every child's offset is measured from the card's top-left corner */
+body.mode-tug .pause-card,
+body.mode-tug .match-summary-card {
+  position: absolute;
+  left: calc(var(--safe-frame-x) + var(--jon-u) * 60);
+  box-sizing: border-box;
+  isolation: isolate;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-image: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+  transform: none;
+  text-align: center;
+  color: var(--pack-ink, var(--jon-ink));
+}
+
+body.mode-tug .pause-card::before,
+body.mode-tug .match-summary-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  box-sizing: border-box;
+  border: calc(var(--jon-u) * 28) solid transparent;
+  border-image: var(--pack-panel, var(--jon-frame-panel)) 56 fill / calc(var(--jon-u) * 28) stretch;
+  pointer-events: none;
+}
+
+body.mode-tug .pause-card {
+  top: calc(var(--safe-frame-y) + var(--jon-u) * 254);
+  width: calc(var(--jon-u) * 300);
+  height: calc(var(--jon-u) * 276);
+}
+
+body.mode-tug .match-summary-card {
+  top: calc(var(--safe-frame-y) + var(--jon-u) * 214);
+  width: calc(var(--jon-u) * 300);
+  height: calc(var(--jon-u) * 322);
+  max-height: none;
+}
+
+/* the text lines: absolute, full card width, a fixed box centred on one line */
+body.mode-tug .pause-card h2,
+body.mode-tug .pause-card .tug-dialog-line,
+body.mode-tug .match-summary-card h2,
+body.mode-tug .match-summary-card .match-result-copy,
+body.mode-tug .match-summary-card .match-next-goal {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  text-align: center;
+  white-space: nowrap;
+}
+
+body.mode-tug .pause-card h2,
+body.mode-tug .match-summary-card h2 {
+  font-family: var(--pack-font-title, var(--jon-font-title));
+  color: var(--pack-ink, var(--jon-ink));
+}
+
+body.mode-tug .pause-card .tug-dialog-line,
+body.mode-tug .match-summary-card .match-next-goal {
+  font-family: var(--pack-font-head, var(--jon-font-head));
+  font-size: calc(var(--jon-u) * 16);
+  height: calc(var(--jon-u) * 16);
+  color: var(--pack-muted, var(--jon-muted));
+}
+
+body.mode-tug .match-summary-card .match-result-copy {
+  font-family: var(--pack-font-head, var(--jon-font-head));
+  font-size: calc(var(--jon-u) * 22);
+  height: calc(var(--jon-u) * 22);
+  color: var(--pack-ink, var(--jon-ink));
+}
+
+/* pause and quit: h2 box top 282 (card offset 28), line box top 338 (84) */
+body.mode-tug .pause-card h2 {
+  top: calc(var(--jon-u) * 28);
+  height: calc(var(--jon-u) * 46);
+  font-size: calc(var(--jon-u) * 46);
+}
+
+body.mode-tug #quit-overlay .pause-card h2 {
+  font-size: calc(var(--jon-u) * 40);
+}
+
+body.mode-tug .pause-card .tug-dialog-line {
+  top: calc(var(--jon-u) * 84);
+}
+
+/* match end: h2 box top 242 (card offset 28), result line 314 (100), next goal 344 (130); eyebrow and stats grid not shown */
+body.mode-tug .match-summary-card h2 {
+  top: calc(var(--jon-u) * 28);
+  height: calc(var(--jon-u) * 60);
+  font-size: calc(var(--jon-u) * 60);
+}
+
+body.mode-tug .match-summary-card .match-result-copy {
+  top: calc(var(--jon-u) * 100);
+}
+
+body.mode-tug .match-summary-card .match-next-goal {
+  top: calc(var(--jon-u) * 130);
+}
+
+body.mode-tug .match-summary-card .eyebrow,
+body.mode-tug .match-summary-card .match-summary-grid {
+  display: none;
+}
+
+/* the button rows stack: the containers stop being flex rows and the buttons sit absolutely in the card */
+body.mode-tug .pause-actions,
+body.mode-tug .match-actions {
+  display: block;
+  margin: 0;
+  gap: 0;
+}
+
+body.mode-tug #game-screen #pause-resume-btn,
+body.mode-tug #game-screen #pause-menu-btn,
+body.mode-tug #game-screen #quit-confirm-btn,
+body.mode-tug #game-screen #quit-cancel-btn,
+body.mode-tug #game-screen #match-play-again-btn,
+body.mode-tug #game-screen #match-home-btn {
+  position: absolute;
+  left: calc(var(--jon-u) * 30);
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  place-content: center;
+  flex: none;
+  width: calc(var(--jon-u) * 240);
+  height: calc(var(--jon-u) * 56);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: calc(var(--jon-u) * 20) solid transparent;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font-family: var(--pack-font-head, var(--jon-font-head));
+  font-weight: 400;
+  line-height: 1;
+  text-transform: none;
+  text-shadow: none;
+  white-space: nowrap;
+  color: var(--pack-ink, var(--jon-ink));
+  -webkit-text-stroke: 0;
+}
+
+/* buttonMain (the one action): head 24 */
+body.mode-tug #game-screen #pause-resume-btn,
+body.mode-tug #game-screen #quit-cancel-btn,
+body.mode-tug #game-screen #match-play-again-btn {
+  border-image: var(--pack-btn-main, var(--jon-btn-blue)) 40 fill / calc(var(--jon-u) * 20) stretch;
+  font-size: calc(var(--jon-u) * 24);
+}
+
+/* buttonSub: head 22 */
+body.mode-tug #game-screen #pause-menu-btn,
+body.mode-tug #game-screen #quit-confirm-btn,
+body.mode-tug #game-screen #match-home-btn {
+  border-image: var(--pack-btn-sub, var(--jon-btn-paper)) 40 fill / calc(var(--jon-u) * 20) stretch;
+  font-size: calc(var(--jon-u) * 22);
+}
+
+body.mode-tug #game-screen #match-play-again-btn:disabled,
+body.mode-tug #game-screen #match-home-btn:disabled {
+  border-image: var(--pack-btn-sub, var(--jon-btn-paper)) 40 fill / calc(var(--jon-u) * 20) stretch;
+  color: var(--pack-muted, var(--jon-muted));
+}
+
+/* first button at the upper rect, second at the lower: pause 378 / 446 (card offsets 124 / 192), match end 384 / 452 (170 / 238) */
+body.mode-tug #game-screen #pause-resume-btn,
+body.mode-tug #game-screen #quit-confirm-btn {
+  top: calc(var(--jon-u) * 124);
+}
+
+body.mode-tug #game-screen #pause-menu-btn,
+body.mode-tug #game-screen #quit-cancel-btn {
+  top: calc(var(--jon-u) * 192);
+}
+
+body.mode-tug #game-screen #match-play-again-btn {
+  top: calc(var(--jon-u) * 170);
+}
+
+body.mode-tug #game-screen #match-home-btn {
+  top: calc(var(--jon-u) * 238);
+}

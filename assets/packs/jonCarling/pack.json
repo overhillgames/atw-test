@@ -1,0 +1,552 @@
+{
+  "id": "jonCarling",
+  "name": "Jon Carling",
+  "picker": {
+    "artist": "Jon Carling",
+    "icon": "assets/ui/artist-icons/joncarling.png",
+    "instagram": "https://www.instagram.com/joncarling/",
+    "quadBackground": "assets/arena/quad-backgrounds/joncarling.png",
+    "preview": {
+      "creeps": [
+        "imp",
+        "runner"
+      ],
+      "towers": [
+        "violet",
+        "yellow"
+      ]
+    }
+  },
+  "chrome": {
+    "mode": "nineSlice",
+    "paperBleed": true
+  },
+  "template": {
+    "assetRoot": "assets/joncarling/battlefield-template-v4",
+    "artboardWidth": 1260,
+    "artboardHeight": 1000,
+    "safeOffsetX": 420,
+    "safeOffsetY": 180,
+    "layers": [
+      "01_bleed_area.png",
+      "02_safe_area.png",
+      "03_battlefield.png",
+      "04_tower_dock.png",
+      "05_creep_dock.png",
+      "06_timer_round_panel.png",
+      "07_timer_round_containers.png",
+      "08_score_mana_panel.png",
+      "09_score_mana_containers.png",
+      "10_tower_card_frames.png",
+      "12_creep_card_frames.png",
+      "17_ready_(skips_timer).png"
+    ],
+    "timerFillLayer": "16_timer_fill_rect_24x122.png",
+    "markerPath": "assets/ui/markers/battlefield-tower-marker.png",
+    "markerSize": 48,
+    "towerCardCenters": [
+      {
+        "x": 477,
+        "y": 821
+      },
+      {
+        "x": 553,
+        "y": 821
+      },
+      {
+        "x": 629,
+        "y": 821
+      },
+      {
+        "x": 705,
+        "y": 821
+      },
+      {
+        "x": 781,
+        "y": 821
+      }
+    ],
+    "creepCardCenters": [
+      {
+        "x": 477,
+        "y": 902
+      },
+      {
+        "x": 553,
+        "y": 902
+      },
+      {
+        "x": 629,
+        "y": 902
+      },
+      {
+        "x": 705,
+        "y": 902
+      },
+      {
+        "x": 781,
+        "y": 902
+      }
+    ]
+  },
+  "hud": {
+    "text": {
+      "round": {
+        "size": 16,
+        "color": "#141414",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "time": {
+        "size": 15,
+        "color": "#141414",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "ai": {
+        "size": 16,
+        "color": "#141414",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "mana": {
+        "size": 16,
+        "color": "#141414",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "you": {
+        "size": 16,
+        "color": "#141414",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "ready": {
+        "size": 15,
+        "color": "#141414",
+        "outline": {
+          "width": 0.5,
+          "color": "#141414"
+        }
+      },
+      "pause": {
+        "size": 15,
+        "color": "#141414",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      }
+    },
+    "anchors": {
+      "round": {
+        "x": 32,
+        "y": 215
+      },
+      "time": {
+        "x": 32,
+        "y": 384
+      },
+      "ai": {
+        "x": 387,
+        "y": 215
+      },
+      "mana": {
+        "x": 386,
+        "y": 300
+      },
+      "you": {
+        "x": 387,
+        "y": 384
+      }
+    },
+    "timerFill": {
+      "x": 22,
+      "y": 256,
+      "width": 21,
+      "height": 99
+    },
+    "ready": {
+      "x": 5,
+      "y": 427,
+      "width": 54,
+      "height": 37,
+      "art": "button"
+    },
+    "pause": {
+      "x": 359,
+      "y": 427,
+      "width": 54,
+      "height": 37
+    },
+    "midY": 309
+  },
+  "layout": {
+    "columns": [
+      {
+        "x": 4,
+        "y": 188,
+        "width": 60,
+        "height": 242
+      },
+      {
+        "x": 358,
+        "y": 188,
+        "width": 60,
+        "height": 242
+      }
+    ],
+    "statTiles": {
+      "round": {
+        "x": 10,
+        "y": 200,
+        "width": 44,
+        "height": 46
+      },
+      "time": {
+        "x": 10,
+        "y": 369,
+        "width": 44,
+        "height": 46
+      },
+      "ai": {
+        "x": 364,
+        "y": 200,
+        "width": 44,
+        "height": 46
+      },
+      "mana": {
+        "x": 364,
+        "y": 285,
+        "width": 44,
+        "height": 46
+      },
+      "you": {
+        "x": 364,
+        "y": 369,
+        "width": 44,
+        "height": 46
+      }
+    },
+    "statLabels": {
+      "round": {
+        "x": 32,
+        "y": 235,
+        "size": 11,
+        "color": "#5a4a3a",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "time": {
+        "x": 32,
+        "y": 404,
+        "size": 11,
+        "color": "#5a4a3a",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "ai": {
+        "x": 386,
+        "y": 235,
+        "size": 11,
+        "color": "#5a4a3a",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "mana": {
+        "x": 386,
+        "y": 320,
+        "size": 11,
+        "color": "#5a4a3a",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "you": {
+        "x": 386,
+        "y": 404,
+        "size": 11,
+        "color": "#5a4a3a",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      }
+    },
+    "timerTile": {
+      "x": 10,
+      "y": 250,
+      "width": 44,
+      "height": 111
+    },
+    "dock": {
+      "x": 0,
+      "y": 587,
+      "width": 420,
+      "height": 173
+    },
+    "popup": {
+      "x": 66,
+      "width": 288,
+      "topY": 170,
+      "maxHeight": 260,
+      "padding": 20
+    },
+    "cardSlots": {
+      "towers": [
+        {
+          "x": 57,
+          "y": 641
+        },
+        {
+          "x": 133,
+          "y": 641
+        },
+        {
+          "x": 209,
+          "y": 641
+        },
+        {
+          "x": 285,
+          "y": 641
+        },
+        {
+          "x": 361,
+          "y": 641
+        }
+      ],
+      "creeps": [
+        {
+          "x": 57,
+          "y": 722
+        },
+        {
+          "x": 133,
+          "y": 722
+        },
+        {
+          "x": 209,
+          "y": 722
+        },
+        {
+          "x": 285,
+          "y": 722
+        },
+        {
+          "x": 361,
+          "y": 722
+        }
+      ]
+    },
+    "cards": {
+      "towers": {
+        "icon": {
+          "x": 0,
+          "y": -10,
+          "width": 40,
+          "height": 48
+        },
+        "role": {
+          "color": "#141414",
+          "outline": {
+            "width": 0,
+            "color": "#141414"
+          },
+          "x": -29,
+          "y": 33,
+          "size": 10
+        },
+        "cost": {
+          "color": "#141414",
+          "outline": {
+            "width": 0,
+            "color": "#141414"
+          },
+          "x": 30,
+          "y": 34,
+          "size": 15
+        }
+      },
+      "creeps": {
+        "icon": {
+          "x": 0,
+          "y": -10,
+          "width": 36,
+          "height": 36
+        },
+        "role": {
+          "color": "#141414",
+          "outline": {
+            "width": 0,
+            "color": "#141414"
+          },
+          "x": -29,
+          "y": 26,
+          "size": 10
+        },
+        "cost": {
+          "color": "#141414",
+          "outline": {
+            "width": 0,
+            "color": "#141414"
+          },
+          "x": 30,
+          "y": 27,
+          "size": 15
+        }
+      }
+    }
+  },
+  "ui": {
+    "root": "assets/packs/jonCarlingLight/ui",
+    "scale": 2,
+    "pieces": {
+      "panel": {
+        "file": "panel.png",
+        "inset": 28
+      },
+      "card": {
+        "file": "card.png",
+        "inset": 20
+      },
+      "cardSelected": {
+        "file": "card-selected.png",
+        "inset": 20
+      },
+      "buttonMain": {
+        "file": "button-main.png",
+        "inset": 20
+      },
+      "buttonSub": {
+        "file": "button-sub.png",
+        "inset": 20
+      },
+      "barInk": {
+        "file": "bar-ink.png",
+        "inset": 24
+      },
+      "barMask": {
+        "file": "bar-mask.png",
+        "inset": 24
+      },
+      "barTile": {
+        "file": "bar-tile.png"
+      }
+    }
+  },
+  "fonts": {
+    "title": {
+      "family": "Caveat Brush",
+      "file": "assets/packs/jonCarlingLight/fonts/CaveatBrush-Regular.ttf"
+    },
+    "head": {
+      "family": "Patrick Hand",
+      "file": "assets/packs/jonCarlingLight/fonts/PatrickHand-Regular.ttf"
+    },
+    "body": {
+      "family": "Trebuchet MS",
+      "file": null
+    }
+  },
+  "colours": {
+    "ink": "#141414",
+    "paper": "#f0e0c8",
+    "paper3": "#dcc9a8",
+    "accent": "#18a0e0",
+    "muted": "#5a4a3a",
+    "gold": "#f0e080",
+    "red": "#d8405a"
+  },
+  "fx": {
+    "root": "assets/packs/jonCarlingLight/fx"
+  },
+  "units": {
+    "battlefield": "assets/joncarling/arena/battlefield_background.png",
+    "motion": {
+      "imp": "walk",
+      "runner": "walk",
+      "brute": "walk",
+      "wisp": "float",
+      "tank": "roll"
+    },
+    "towers": {
+      "violet": "assets/towers/violet.png",
+      "yellow": "assets/towers/yellow.png",
+      "red": "assets/towers/red.png",
+      "green": "assets/towers/green.png",
+      "blue": "assets/towers/blue.png"
+    },
+    "attackerIcons": {
+      "imp": null,
+      "runner": null,
+      "brute": null,
+      "wisp": null,
+      "tank": null
+    },
+    "attackerSprites": {
+      "imp": {
+        "path": "assets/creeps/imp-sprite-sheet.png",
+        "frameWidth": 272,
+        "frameHeight": 206,
+        "frames": 4,
+        "fps": 6
+      },
+      "runner": {
+        "path": "assets/creeps/runner-sprite-sheet.png",
+        "frameWidth": 276,
+        "frameHeight": 286,
+        "frames": 4,
+        "fps": 6
+      },
+      "brute": {
+        "path": "assets/creeps/brute-sprite-sheet.png",
+        "frameWidth": 270,
+        "frameHeight": 272,
+        "frames": 4,
+        "fps": 6
+      },
+      "wisp": {
+        "path": "assets/creeps/wisp-sprite-sheet.png",
+        "frameWidth": 242,
+        "frameHeight": 260,
+        "frames": 4,
+        "fps": 6
+      },
+      "tank": {
+        "path": "assets/creeps/tank-sprite-sheet.png",
+        "frameWidth": 270,
+        "frameHeight": 302,
+        "frames": 4,
+        "fps": 6
+      }
+    },
+    "creepKillEffect": {
+      "path": "assets/joncarling/effects/creep-kill-explosion.png",
+      "frameWidth": 97,
+      "frameHeight": 83,
+      "frames": 12,
+      "fps": 12.5,
+      "renderWidth": 78,
+      "renderHeight": 67
+    },
+    "sideAssets": null
+  },
+  "placeholders": []
+}

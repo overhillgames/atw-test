@@ -1,0 +1,169 @@
+{
+  "source": "G:\\My Drive\\Tower Wars Team\\Tower Wars Art\\Brian\\Jon Quick Battlefield Update 20260616.aseprite",
+  "canvas": { "width": 1260, "height": 1000 },
+  "zOrderNote": "Export order follows Aseprite's layer collection order. zIndex is zero-based in that order; relative ordering is preserved for future mapping.",
+  "layers": [
+    {
+      "zIndex": 0,
+      "name": "notes_blank",
+      "path": "notes_blank",
+      "file": "00_notes_blank.png",
+      "originalVisible": false,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 1,
+      "name": "bleed_area",
+      "path": "bleed_area",
+      "file": "01_bleed_area.png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 2,
+      "name": "safe_area",
+      "path": "safe_area",
+      "file": "02_safe_area.png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 3,
+      "name": "battlefield",
+      "path": "battlefield",
+      "file": "03_battlefield.png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 4,
+      "name": "tower_dock",
+      "path": "tower_dock",
+      "file": "04_tower_dock.png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 5,
+      "name": "creep_dock",
+      "path": "creep_dock",
+      "file": "05_creep_dock.png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 6,
+      "name": "timer_round_panel",
+      "path": "timer_round_panel",
+      "file": "06_timer_round_panel.png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 7,
+      "name": "timer_round_containers",
+      "path": "timer_round_containers",
+      "file": "07_timer_round_containers.png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 8,
+      "name": "score_mana_panel",
+      "path": "score_mana_panel",
+      "file": "08_score_mana_panel.png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 9,
+      "name": "score_mana_containers",
+      "path": "score_mana_containers",
+      "file": "09_score_mana_containers.png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 10,
+      "name": "tower_card_frames",
+      "path": "tower_card_frames",
+      "file": "10_tower_card_frames.png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 11,
+      "name": "tower_sprite_boxes",
+      "path": "tower_sprite_boxes",
+      "file": "11_tower_sprite_boxes.png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 12,
+      "name": "creep_card_frames",
+      "path": "creep_card_frames",
+      "file": "12_creep_card_frames.png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 13,
+      "name": "creep_sprite_boxes",
+      "path": "creep_sprite_boxes",
+      "file": "13_creep_sprite_boxes.png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 14,
+      "name": "battlefield_tower_positions",
+      "path": "battlefield_tower_positions",
+      "file": "14_battlefield_tower_positions.png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 15,
+      "name": "debug_safe_bounds",
+      "path": "debug_safe_bounds",
+      "file": "15_debug_safe_bounds.png",
+      "originalVisible": false,
+      "opacity": 255,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 16,
+      "name": "timer_fill_rect_24x122",
+      "path": "timer_fill_rect_24x122",
+      "file": "16_timer_fill_rect_24x122.png",
+      "originalVisible": true,
+      "opacity": 220,
+      "blendMode": "3"
+    },
+    {
+      "zIndex": 17,
+      "name": "ready (skips timer)",
+      "path": "ready (skips timer)",
+      "file": "17_ready_(skips_timer).png",
+      "originalVisible": true,
+      "opacity": 255,
+      "blendMode": "3"
+    }
+  ]
+}

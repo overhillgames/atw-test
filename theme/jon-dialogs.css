@@ -1,0 +1,240 @@
+/* ============================================================
+   JON THEME: online dialogs
+   The two dialogs over the title screen and a classic online match: "Online searching"
+   (#matchmaking-overlay, injected by lobby.js and tug-net.js) and "Rival disconnected"
+   (#disconnect-overlay, injected by lobby.js). Both are the same drawn panel on a paper wash.
+   Loaded after style.css and theme/jon-chrome.css (so it overrides the old slate cards) and after
+   theme/jon-menu.css. Every rule starts with one of the two overlay ids, so nothing else on the page is touched.
+   The overlays keep style.css's position: fixed, inset 0 and z-index (200 / 250), and their .hidden behaviour.
+   Design numbers (Menu Screens, 420x760 frame): the panel is 300x276, centred horizontally, top at calc(50% - 126px)
+   (254 on a 760 screen); inside, every item is placed from the panel's top: eyebrow 26, title 46 (40 px box),
+   spinner or countdown 94 / 96, status 150, Cancel 192. Absolute positions, so a hidden spinner, Cancel or countdown
+   (tug-net hides the first two while starting) leaves nothing else moving.
+   Type: Patrick Hand for everything, Caveat Brush for the two titles, weight 400. No transform and no filter on hover;
+   the only motion is the spinner's rotation. Materials and colours come from the --jon-* variables (jon-chrome.css, style.css).
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   The wash: full screen, paper at .8, no blur. A block (not flex) so the card places itself.
+   ------------------------------------------------------------ */
+
+#matchmaking-overlay,
+#disconnect-overlay {
+  display: block;
+  background: rgba(240, 224, 200, 0.8);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+#matchmaking-overlay.hidden,
+#disconnect-overlay.hidden {
+  display: none;
+}
+
+/* ------------------------------------------------------------
+   The card: the drawn panel (its 28 px border is a layer behind, so the children can be placed from the card's top edge).
+   ------------------------------------------------------------ */
+
+#matchmaking-overlay .matchmaking-card,
+#disconnect-overlay .disconnect-card {
+  position: absolute;
+  left: calc(50% - 150px);
+  top: calc(50% - 126px);
+  box-sizing: border-box;
+  display: block;
+  width: 300px;
+  height: 276px;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  isolation: isolate;
+  text-align: center;
+  color: var(--jon-ink);
+  font-family: var(--jon-font-head);
+  font-weight: 400;
+}
+
+#matchmaking-overlay .matchmaking-card::before,
+#disconnect-overlay .disconnect-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  box-sizing: border-box;
+  border: 28px solid transparent;
+  border-image: var(--jon-frame-panel) 28 fill / 28px stretch;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------
+   Eyebrow: head 16, muted, sentence case as written (the old caps and tracking are off), at 26.
+   ------------------------------------------------------------ */
+
+#matchmaking-overlay .matchmaking-card .eyebrow,
+#disconnect-overlay .disconnect-card .eyebrow {
+  position: absolute;
+  left: 0;
+  top: 26px;
+  width: 100%;
+  margin: 0;
+  font-family: var(--jon-font-head);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 16px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--jon-muted);
+}
+
+/* ------------------------------------------------------------
+   Titles: Caveat in a 40 px box at 46 (36 for the search, 34 for the disconnect), one line, centred.
+   ------------------------------------------------------------ */
+
+#matchmaking-overlay .matchmaking-card h2,
+#disconnect-overlay .disconnect-card h2 {
+  position: absolute;
+  left: 0;
+  top: 46px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--jon-font-title);
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
+  color: var(--jon-ink);
+}
+
+#disconnect-overlay .disconnect-card h2 {
+  font-size: 34px;
+}
+
+/* ------------------------------------------------------------
+   Spinner: O48, a 4 px dashed ink ring with the accent on top, turning every 1.6 s (at 94 from the card's top).
+   ------------------------------------------------------------ */
+
+#matchmaking-overlay .matchmaking-spinner {
+  position: absolute;
+  left: calc(50% - 24px);
+  top: 94px;
+  box-sizing: border-box;
+  width: 48px;
+  height: 48px;
+  margin: 0;
+  border: 4px dashed var(--jon-ink);
+  border-top-color: var(--jon-blue);
+  border-radius: 50%;
+  background: none;
+  animation: jon-dialog-spin 1.6s linear infinite;
+}
+
+#matchmaking-overlay .matchmaking-spinner[hidden] {
+  display: none;
+}
+
+@keyframes jon-dialog-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ------------------------------------------------------------
+   Status lines: head 16 / line 18, muted, 252 wide, centred, at 150 (the search's may wrap to two lines).
+   ------------------------------------------------------------ */
+
+#matchmaking-overlay .matchmaking-status,
+#disconnect-overlay .disconnect-status {
+  position: absolute;
+  left: calc(50% - 126px);
+  top: 150px;
+  box-sizing: border-box;
+  width: 252px;
+  margin: 0;
+  font-family: var(--jon-font-head);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 18px;
+  text-align: center;
+  text-wrap: pretty;
+  color: var(--jon-muted);
+}
+
+/* ------------------------------------------------------------
+   Disconnect countdown: head 36 in a 40 px box at 96, ink. Its [hidden] stays.
+   ------------------------------------------------------------ */
+
+#disconnect-overlay .disconnect-countdown {
+  position: absolute;
+  left: 0;
+  top: 96px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--jon-font-head);
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--jon-ink);
+}
+
+#disconnect-overlay .disconnect-countdown[hidden] {
+  display: none;
+}
+
+/* ------------------------------------------------------------
+   Cancel: the paper button, 240x56, centred at 192, head 22. The row is the button's own box, so a hidden Cancel
+   (tug-net sets [hidden] on the button) moves nothing. No hover or press change: the old teal hover is overridden
+   and no transform or filter is used.
+   ------------------------------------------------------------ */
+
+#matchmaking-overlay .matchmaking-actions {
+  position: absolute;
+  left: calc(50% - 120px);
+  top: 192px;
+  width: 240px;
+  height: 56px;
+  margin: 0;
+}
+
+#matchmaking-overlay .matchmaking-actions button,
+#matchmaking-overlay .matchmaking-actions button:hover,
+#matchmaking-overlay .matchmaking-actions button:active {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 240px;
+  height: 56px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 20px solid transparent;
+  border-image: var(--jon-btn-paper) 20 fill / 20px stretch;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--jon-ink);
+  font-family: var(--jon-font-head);
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+
+#matchmaking-overlay .matchmaking-actions button[hidden] {
+  display: none;
+}

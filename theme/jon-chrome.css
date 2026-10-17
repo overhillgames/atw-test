@@ -1,0 +1,265 @@
+/* ============================================================
+   JON THEME: chrome
+   Fonts, the baked nine-slice materials (panel, wood strip, card, buttons), button and card states.
+   Loaded after style.css. The art comes from tools/jon-theme-tiles.py; there is no runtime
+   filter, nothing moves on hover, and no CSS shadow: panels carry their shadow in the drawing.
+   Applies to the menu, options, gauntlet and records screens only; the in-battle DOM is not touched.
+   ============================================================ */
+
+@font-face {
+  font-family: "Caveat Brush";
+  src: url("../assets/fonts/CaveatBrush-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "Patrick Hand";
+  src: url("../assets/fonts/PatrickHand-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+:root {
+  --jon-frame-panel: url("../assets/ui/jon-theme/frame-panel.png");                 /* 192x192, slice 28, shadow baked in */
+  --jon-frame-wood-ink: url("../assets/ui/jon-theme/frame-wood-ink.png");           /* 192x96, slice 24: the ink line only */
+  --jon-frame-wood-mask: url("../assets/ui/jon-theme/frame-wood-mask.png");         /* 192x96, slice 24: the same shape, white */
+  --jon-frame-strip-ink: url("../assets/ui/jon-theme/frame-strip-ink.png");         /* 64x32, slice 8: the menu strip's ink line */
+  --jon-frame-strip-mask: url("../assets/ui/jon-theme/frame-strip-mask.png");       /* 64x32, slice 8: the same shape, white */
+  /* the wood itself: one 400x64 strip, never flipped, scaled to cover the bar (one span, no repeat). Declared here, next to the rule
+     that uses it: a url() inside a custom property resolves against the stylesheet that declares it */
+  --jon-wood-strip: url("../assets/ui/jon-theme/wood-tile.png");
+  --jon-frame-card: url("../assets/ui/jon-theme/frame-card.png");                   /* 144x144, slice 20 (= a) */
+  --jon-frame-card-a: url("../assets/ui/jon-theme/frame-card-a.png");
+  --jon-frame-card-b: url("../assets/ui/jon-theme/frame-card-b.png");
+  --jon-frame-card-c: url("../assets/ui/jon-theme/frame-card-c.png");
+  --jon-frame-card-selected: url("../assets/ui/jon-theme/frame-card-selected.png"); /* blue stroke (= a) */
+  --jon-frame-card-selected-a: url("../assets/ui/jon-theme/frame-card-selected-a.png");
+  --jon-frame-card-selected-b: url("../assets/ui/jon-theme/frame-card-selected-b.png");
+  --jon-frame-card-selected-c: url("../assets/ui/jon-theme/frame-card-selected-c.png");
+  --jon-btn-blue: url("../assets/ui/jon-theme/btn-blue.png");                       /* 192x60, slice 20 (= a) */
+  --jon-btn-blue-a: url("../assets/ui/jon-theme/btn-blue-a.png");
+  --jon-btn-blue-b: url("../assets/ui/jon-theme/btn-blue-b.png");
+  --jon-btn-paper: url("../assets/ui/jon-theme/btn-paper.png");                     /* 192x60, slice 20 (= a) */
+  --jon-btn-paper-a: url("../assets/ui/jon-theme/btn-paper-a.png");
+  --jon-btn-paper-b: url("../assets/ui/jon-theme/btn-paper-b.png");
+  --jon-scene: url("../assets/ui/jon-theme/menu-scene.png");                        /* 420x760 */
+  --jon-font-title: "Caveat Brush", "Patrick Hand", cursive;
+  --jon-font-head: "Patrick Hand", "Trebuchet MS", sans-serif;
+  --jon-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* selected card: lands at rest in 120 ms (ends on scale 1, so the hit target never moves at rest) */
+@keyframes jon-snap {
+  from { transform: scale(1.02); }
+  to { transform: scale(1); }
+}
+
+/* ------------------------------------------------------------
+   Headings (the inner screens' top bar and panel titles switch to Caveat Brush in jon-screens.css,
+   which also sets the head font on everything else on those screens)
+   ------------------------------------------------------------ */
+
+:is(.menu-screen, .options-screen, .gauntlet-screen, .records-screen) :is(h1, h2) {
+  font-family: var(--jon-font-head);
+  font-weight: 400; /* the font has one weight; a bold request would only smear it */
+}
+
+/* ------------------------------------------------------------
+   Panels: the drawn frame. The 28 px border is the padding; `fill` paints the tile's paper.
+   The tiles are long, so the middle stretches (no joints). The shadow is part of the drawing.
+   ------------------------------------------------------------ */
+
+.menu-hero,
+.panel,
+.options-panel,
+.stats-panel,
+.milestones-panel,
+.rankings-panel {
+  padding: 0;
+  border: 28px solid transparent;
+  border-image: var(--jon-frame-panel) 28 fill / 28px stretch;
+  border-radius: 16px;
+  background: none;
+  box-shadow: none;
+}
+
+/* ------------------------------------------------------------
+   Wood bars: the inner screens' 64 px top bars (the Gauntlet's header too), the Gauntlet's Engage bar,
+   the menu's option strip.
+   Three layers, so no nine-slice seam can show in the grain: one wood image covers the bar as its
+   background (scaled once, never flipped, never repeated), a nine-sliced mask clips it to the drawn
+   shape, and the ink-only nine-slice draws the line on top. Only the ink and the mask's edge stretch.
+   (The 24 px border is also the padding for the buttons inside the Gauntlet's bar; the top bars hold
+   only a title, so jon-screens.css narrows their layout border to 2 px and the ink and mask keep
+   their 24 px image width; the menu strip draws at 8 px.)
+   ------------------------------------------------------------ */
+
+.jon-topbar,
+.menu-options-entry,
+.gauntlet-controls {
+  padding: 0;
+  border: 24px solid transparent;
+  border-image: var(--jon-frame-wood-ink) 24 / 24px stretch;
+  border-radius: 0;
+  background: var(--jon-wood-dark) var(--jon-wood-strip) no-repeat center / cover;
+  background-origin: border-box;
+  background-clip: border-box;
+  -webkit-mask-box-image: var(--jon-frame-wood-mask) 24 / 24px stretch;
+  mask-border: var(--jon-frame-wood-mask) 24 / 24px stretch;
+  box-shadow: none;
+}
+
+/* the menu strip draws its border at --dock-strip-border = 8 px (jon-menu.css sets border-width and
+   border-image-width); its ink and mask are their own pair drawn for an 8 px slice, so the line keeps the
+   other bars' stroke weight and wander instead of the 24 px art scaled to a third. The mask's slice says
+   `fill`: the longhand does not carry the shorthand's implied fill, and without it the middle is cut out. */
+.menu-screen .menu-options-entry {
+  border-image-source: var(--jon-frame-strip-ink);
+  border-image-slice: 8;
+  -webkit-mask-box-image-source: var(--jon-frame-strip-mask);
+  -webkit-mask-box-image-slice: 8 fill;
+  -webkit-mask-box-image-width: var(--dock-strip-border);
+  mask-border-source: var(--jon-frame-strip-mask);
+  mask-border-slice: 8 fill;
+  mask-border-width: var(--dock-strip-border);
+}
+
+/* ------------------------------------------------------------
+   Cards: difficulty, art and music options, volume rows, records rows. No shadow.
+   The drawing is 20 px wide (border-image-width) over a 2 px layout border, so it paints under
+   the row's padding the way the design's frame layer sits under its content; each row's padding
+   (jon-screens.css) is the design's inset minus those 2 px and keeps the text off the ink.
+   ------------------------------------------------------------ */
+
+.options-screen :is(.difficulty-option, .art-pack-option, .music-pack-option, .volume-control),
+.records-screen :is(.stat-card, .milestone-row, .ranking-row) {
+  padding: 0;
+  border: 2px solid transparent;
+  border-image: var(--jon-frame-card) 20 fill / 20px stretch;
+  border-radius: 16px;
+  background: none;
+  box-shadow: none;
+  color: var(--jon-ink);
+}
+
+/* three drawings, handed out by position, so stacked cards never repeat the same knuckle */
+.options-screen :is(.difficulty-option, .art-pack-option, .music-pack-option, .volume-control):nth-child(3n + 1),
+.records-screen :is(.stat-card, .milestone-row, .ranking-row):nth-child(3n + 1) {
+  border-image-source: var(--jon-frame-card-a);
+}
+
+.options-screen :is(.difficulty-option, .art-pack-option, .music-pack-option, .volume-control):nth-child(3n + 2),
+.records-screen :is(.stat-card, .milestone-row, .ranking-row):nth-child(3n + 2) {
+  border-image-source: var(--jon-frame-card-b);
+}
+
+.options-screen :is(.difficulty-option, .art-pack-option, .music-pack-option, .volume-control):nth-child(3n),
+.records-screen :is(.stat-card, .milestone-row, .ranking-row):nth-child(3n) {
+  border-image-source: var(--jon-frame-card-c);
+}
+
+/* the clickable cards ease their state changes */
+.options-screen :is(.difficulty-option, .art-pack-option, .music-pack-option) {
+  transition: filter 150ms var(--jon-ease), opacity 150ms;
+}
+
+/* style.css tints these on hover; the drawn card carries its own paper */
+.options-screen :is(.difficulty-option, .art-pack-option, .music-pack-option):hover {
+  background: none;
+}
+
+.options-screen :is(.difficulty-option, .art-pack-option, .music-pack-option):not(.locked):hover {
+  filter: brightness(1.06);
+}
+
+.options-screen :is(.difficulty-option, .art-pack-option, .music-pack-option):not(.locked):active {
+  filter: brightness(0.94);
+}
+
+/* (the difficulty colour is the row's .row-bar now, laid out in jon-screens.css) */
+
+/* selected: the same card drawn with a blue stroke (same variant, so the shape does not change),
+   and a 120 ms snap */
+.options-screen :is(.difficulty-option, .art-pack-option, .music-pack-option)[aria-checked="true"] {
+  border-image-source: var(--jon-frame-card-selected);
+  animation: jon-snap 120ms var(--jon-ease);
+}
+
+.options-screen :is(.difficulty-option, .art-pack-option, .music-pack-option)[aria-checked="true"]:nth-child(3n + 1) {
+  border-image-source: var(--jon-frame-card-selected-a);
+}
+
+.options-screen :is(.difficulty-option, .art-pack-option, .music-pack-option)[aria-checked="true"]:nth-child(3n + 2) {
+  border-image-source: var(--jon-frame-card-selected-b);
+}
+
+.options-screen :is(.difficulty-option, .art-pack-option, .music-pack-option)[aria-checked="true"]:nth-child(3n) {
+  border-image-source: var(--jon-frame-card-selected-c);
+}
+
+/* ------------------------------------------------------------
+   Buttons: blue is the one action on a screen, paper is everything else. No shadow.
+   ------------------------------------------------------------ */
+
+:is(.menu-screen, .options-screen, .gauntlet-screen, .records-screen) button:not(.difficulty-option, .art-pack-option, .music-pack-option),
+button.ui-menu-button {
+  padding: 0 0.4rem;
+  min-height: 48px;
+  border: 20px solid transparent;
+  border-radius: 12px;
+  background: none;
+  color: var(--jon-ink);
+  font-weight: 800;
+  box-shadow: none;
+  transition: filter 150ms var(--jon-ease), opacity 150ms;
+}
+
+:is(.menu-screen, .options-screen, .gauntlet-screen, .records-screen) button:not(.secondary, .difficulty-option, .art-pack-option, .music-pack-option),
+button.ui-menu-button:not(.secondary) {
+  border-image: var(--jon-btn-blue) 20 fill / 20px stretch;
+}
+
+:is(.menu-screen, .options-screen, .gauntlet-screen, .records-screen) button.secondary,
+button.ui-menu-button.secondary {
+  border-image: var(--jon-btn-paper) 20 fill / 20px stretch;
+}
+
+:is(.menu-screen, .options-screen, .gauntlet-screen, .records-screen) button:not(.difficulty-option, .art-pack-option, .music-pack-option):hover:not(:disabled),
+button.ui-menu-button:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+:is(.menu-screen, .options-screen, .gauntlet-screen, .records-screen) button:not(.difficulty-option, .art-pack-option, .music-pack-option):active:not(:disabled),
+button.ui-menu-button:active:not(:disabled) {
+  filter: brightness(0.94);
+}
+
+/* disabled: the paper button with muted ink, fully opaque, so it stays readable */
+:is(.menu-screen, .options-screen, .gauntlet-screen, .records-screen) button:not(.difficulty-option, .art-pack-option, .music-pack-option):disabled,
+button.ui-menu-button:disabled {
+  border-image: var(--jon-btn-paper) 20 fill / 20px stretch;
+  color: var(--jon-muted);
+  opacity: 1;
+  filter: none;
+}
+
+/* two drawings per button colour, handed out by position in the button rows, so neighbours differ
+   (the inner screens' Back stands alone in .jon-backbar, so it is always the first drawing) */
+:is(.menu-actions, .menu-options-entry, .gauntlet-controls, .jon-backbar) > button:not(.secondary, :disabled):nth-child(odd) {
+  border-image-source: var(--jon-btn-blue-a);
+}
+
+:is(.menu-actions, .menu-options-entry, .gauntlet-controls, .jon-backbar) > button:not(.secondary, :disabled):nth-child(even) {
+  border-image-source: var(--jon-btn-blue-b);
+}
+
+:is(.menu-actions, .menu-options-entry, .gauntlet-controls, .jon-backbar) > button:is(.secondary, :disabled):nth-child(odd) {
+  border-image-source: var(--jon-btn-paper-a);
+}
+
+:is(.menu-actions, .menu-options-entry, .gauntlet-controls, .jon-backbar) > button:is(.secondary, :disabled):nth-child(even) {
+  border-image-source: var(--jon-btn-paper-b);
+}

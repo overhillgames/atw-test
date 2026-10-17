@@ -1,0 +1,745 @@
+/* ============================================================
+   JON THEME: screens
+   The shell every non-game screen shares: the arena behind it, then three rows on the inner screens
+   (Difficulty, Music, Battle art, Records): a 64 px wood top bar with the title, a content area that
+   scrolls on its own, and Back alone at the bottom on the screen's background. Then the panels' type,
+   the shared two-line row, each screen's rows (the drawn slider on Music), and the screen-enter
+   animation. Design px are CSS px (.plans/ltw-menus-2.md, "The frame-mapping rule").
+   Loaded after jon-chrome.css (materials) and before jon-menu.css (the menu scene).
+   Owns the shell of all five screens; the inside of #menu-screen is jon-menu.css's, so the
+   paper overlay below never applies to the menu. Nothing here uses transform on hover.
+   ============================================================ */
+
+:root {
+  /* a screen fills the shell's content box: the shell already pads the safe areas */
+  --jon-screen-h: calc(var(--app-height) - var(--safe-top) - var(--safe-bottom));
+
+  /* The scene (menu-scene.png, 420x760) has a tan border of its own: 10 px at the sides, 15 px at
+     the top. It is drawn 10% oversize and pinned 30% of the way down, so the border falls off the
+     screen and the arena runs edge to edge; the width never drops below what covers the height.
+     The dock's top ink line is at row 596 of the image, which puts it at 0.3 * screen height +
+     0.876 * scene width on screen. */
+  --jon-screen-w: calc(var(--app-width) - var(--safe-left) - var(--safe-right));
+  --jon-scene-w: max(calc(1.1 * var(--jon-screen-w)), calc(0.608 * var(--jon-screen-h)));
+}
+
+@media (min-width: 640px) {
+  :root {
+    --jon-screen-w: 420px;
+  }
+}
+
+/* ------------------------------------------------------------
+   Screen shell: the scene fills the frame. The inner screens' rows are
+   [top bar 64][content, scrolls][Back area]; the menu and the Gauntlet set their own rows.
+   ------------------------------------------------------------ */
+
+.menu-screen,
+.options-screen,
+.gauntlet-screen,
+.records-screen {
+  position: relative;
+  display: grid;
+  grid-template-rows: 64px minmax(0, 1fr) auto;
+  align-content: stretch;
+  justify-items: stretch;
+  gap: 0;
+  width: 100%;
+  height: var(--jon-screen-h);
+  min-height: var(--jon-screen-h);
+  max-height: none;
+  padding: 0;
+  overflow: visible;
+  box-sizing: border-box;
+  background: var(--jon-scene) center top / cover no-repeat;
+}
+
+/* the menu has one child that fills the screen (no bar row); the gauntlet sets its own rows below */
+.menu-screen {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+/* the framed screens show the arena edge to edge (see --jon-scene-w); the menu keeps jon-menu.css's */
+.options-screen,
+.records-screen,
+.gauntlet-screen {
+  background: var(--jon-scene) center 30% / var(--jon-scene-w) auto no-repeat;
+}
+
+/* a light static layer over the scene so the panels read, but the dock's wood and the lane's
+   texture still show through (no filter); never on the menu */
+.options-screen::before,
+.records-screen::before,
+.gauntlet-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: rgba(240, 224, 200, 0.22);
+  pointer-events: none;
+}
+
+.options-screen > *,
+.records-screen > *,
+.gauntlet-screen > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* desktop: a phone-width column on the body's paper */
+@media (min-width: 640px) {
+  .menu-screen,
+  .options-screen,
+  .gauntlet-screen,
+  .records-screen {
+    max-width: 420px;
+    margin: 0 auto;
+    box-shadow: var(--jon-shadow);
+  }
+}
+
+/* ------------------------------------------------------------
+   Type on the inner screens: Patrick Hand (head) for every label, line and button, weight 400
+   (the font has one weight; a bold request would only smear it). Titles and big numbers switch to
+   Caveat Brush in their own rules below. The selector is (0,2,1) so it outranks style.css's bold
+   spans and jon-chrome.css's button weight; the specific rules below come later and win ties.
+   ------------------------------------------------------------ */
+
+.options-screen,
+.records-screen {
+  color: var(--jon-ink);
+  font-family: var(--jon-font-head);
+}
+
+.screen:is(.options-screen, .records-screen) :is(button, strong, span, p, label, output) {
+  font-family: var(--jon-font-head);
+  font-weight: 400;
+}
+
+/* ------------------------------------------------------------
+   Top bar: the wood recipe (jon-chrome.css) as a full-width 64 px bar at the top, no margin, the
+   title centred in Caveat 34, paper with a 1.5 px ink stroke under the fill. The layout border is
+   2 px; the ink and the mask keep their 24 px drawing (their image widths), so the bar's height is
+   the content's. The Gauntlet's header uses this bar too (same look).
+   ------------------------------------------------------------ */
+
+.jon-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 64px;
+  min-width: 0;
+  margin: 0;
+  padding: 0 12px;
+  border-width: 2px;
+}
+
+.screen .jon-topbar h1 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--jon-paper);
+  font-family: var(--jon-font-title);
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: none;
+  -webkit-text-stroke: 1.5px var(--jon-ink);
+  paint-order: stroke fill;
+}
+
+/* ------------------------------------------------------------
+   Back area: Back alone, a paper button 132 x 52, centred, 16 px above the bottom, on the screen's
+   own background (no wood). The layout border is 4 px; the paper drawing keeps its 20 px image
+   width, so the label centres in the whole button.
+   ------------------------------------------------------------ */
+
+.jon-backbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 20px 12px 16px;
+}
+
+.screen:is(.options-screen, .records-screen) .jon-backbar > button {
+  box-sizing: border-box;
+  width: 132px;
+  height: 52px;
+  min-height: 52px;
+  padding: 0;
+  border-width: 4px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+/* ------------------------------------------------------------
+   Content: scrolls on its own between the top bar and the Back area. Panels sit 12 px from the
+   screen's sides, the first 12 px under the top bar, 12 px apart, with 16 px under the last one
+   (the Back area adds 20 more, so the last panel clears Back by 36 px). Short fades soften the
+   cuts where the content scrolls under the bar and over the Back area; the first panel sits below
+   the top fade at rest.
+   ------------------------------------------------------------ */
+
+.jon-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  margin: 0;
+  padding: 12px 12px 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 8px, #000 calc(100% - 14px), transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 8px, #000 calc(100% - 14px), transparent);
+}
+
+.jon-content > * {
+  flex: none;
+  min-width: 0;
+}
+
+/* the old stacking margins; the flex gap spaces the panels now */
+.jon-content .options-panel {
+  margin: 0;
+}
+
+/* Records' panels sit in one more wrapper: the same column, the same 12 px */
+.records-screen .records-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+/* panel title Caveat 26 / 28; summary head 16 / 20 muted (the panel keeps its 28 px drawn border
+   as the padding) */
+.screen:is(.options-screen, .records-screen) .panel-header h2 {
+  margin: 0;
+  color: var(--jon-ink);
+  font-family: var(--jon-font-title);
+  font-size: 26px;
+  font-weight: 400;
+  line-height: 28px;
+}
+
+.screen:is(.options-screen, .records-screen) .panel-header p {
+  margin: 4px 0 0;
+  color: var(--jon-muted);
+  font-size: 16px;
+  line-height: 20px;
+}
+
+/* every list in a panel: rows fill the panel's width, 8 px apart, 12 px under the panel's header */
+.screen:is(.options-screen, .records-screen) :is(.difficulty-list, .volume-controls, .music-pack-grid, .art-pack-grid, .overview-grid, .milestone-list, .ranking-list) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* ------------------------------------------------------------
+   Gauntlet: rows [top bar 64][map window, fills][wood bar 84]. The top bar is the shared .jon-topbar
+   (above). The window is full width with no frame, margin, rounding or fade, on #ead9bd; it is a
+   scroll box (a finger or wheel moves the map, scrollbar hidden) and 08-gauntlet.js scrolls it to
+   the current stage, reading its live size. The track (style.css) is the window's width with its
+   630 / 1520 aspect, so the map scales to it and the markers' percentages stay on the road. The
+   markers below override style.css's: 40 px discs (9.5 % of the track, boss 12 %) in a 3 px ring of
+   the difficulty colour inside a 2 px ink ring. The bar is the wood recipe (jon-chrome.css), Back
+   (paper, 132 x 52) at the left and Engage (blue, 52 tall) filling the rest, 16 px above the bottom.
+   Type is head (Patrick Hand) 400 throughout. Nothing moves on hover.
+   ------------------------------------------------------------ */
+
+.gauntlet-screen {
+  grid-template-rows: 64px minmax(0, 1fr) 84px;
+}
+
+.gauntlet-screen > .jon-topbar {
+  grid-row: 1;
+}
+
+.gauntlet-screen > .gauntlet-map-viewport {
+  grid-row: 2;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  background: #ead9bd;
+}
+
+.gauntlet-screen > .gauntlet-map-viewport::-webkit-scrollbar {
+  display: none;
+}
+
+/* Stage markers: Ø40 at the 420 px frame (9.5 % of the 630 px track; boss 12 %), the ring 3 px in the
+   difficulty colour and an ink ring outside it. style.css's colour fill, muted pending number and
+   inset ring are replaced. Position (left / top / translate) stays style.css's. */
+.gauntlet-screen .gauntlet-marker {
+  box-sizing: border-box;
+  border: 3px solid var(--difficulty-color, var(--jon-blue));
+  background: var(--jon-paper);
+  color: var(--jon-ink);
+  box-shadow: 0 0 0 2px var(--jon-ink);
+}
+
+.gauntlet-screen .gauntlet-marker .gauntlet-marker-num {
+  font-family: var(--jon-font-head);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* the stage the orb is on: filled solid with its colour */
+.gauntlet-screen .gauntlet-marker.current {
+  background: var(--difficulty-color, var(--jon-blue));
+  box-shadow: 0 0 0 2px var(--jon-ink);
+}
+
+/* not reached yet: paper with a dashed ring */
+.gauntlet-screen .gauntlet-marker.pending {
+  border-style: dashed;
+  background: var(--jon-paper);
+  color: var(--jon-ink);
+  box-shadow: 0 0 0 2px var(--jon-ink);
+}
+
+/* cleared: paper with a solid ring and style.css's check badge */
+.gauntlet-screen .gauntlet-marker.complete {
+  background: var(--jon-paper);
+}
+
+/* The bar: the wood recipe at 84 px, full width, no margin. Its layout border is 2 px (the ink and
+   the mask keep their 24 px drawing, as on the top bars), so the buttons can sit 12 px from the
+   sides: 10 px of padding inside the border. Back and Engage are 52 tall, centred (16 px above and
+   below), 8 px apart. */
+.gauntlet-screen > .gauntlet-controls {
+  grid-row: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  height: 84px;
+  min-width: 0;
+  margin: 0;
+  padding: 0 10px;
+  border-width: 2px;
+}
+
+/* the buttons are layout-bordered at 4 px with the 20 px drawing kept, as the Back area's Back is,
+   so a 52 px button holds its label; head font, weight 400 (jon-chrome.css gives buttons 800) */
+.screen.gauntlet-screen .gauntlet-controls > button {
+  box-sizing: border-box;
+  height: 52px;
+  min-height: 52px;
+  margin: 0;
+  padding: 0;
+  border-width: 4px;
+  font-family: var(--jon-font-head);
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.screen.gauntlet-screen .gauntlet-controls > #gauntlet-back-btn {
+  flex: none;
+  width: 132px;
+  font-size: 22px;
+}
+
+.screen.gauntlet-screen .gauntlet-controls > #gauntlet-start-btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 24px;
+}
+
+/* ------------------------------------------------------------
+   Rows: the shared two-line type. Every row is a card (jon-chrome.css draws it at 20 px over a 2 px
+   layout border, so each row's padding below is the design's inset minus those 2 px).
+   Title head 19 / 20 ink, sub head 15 / 16 muted.
+   ------------------------------------------------------------ */
+
+.screen:is(.options-screen, .records-screen) .row-text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  text-align: left;
+}
+
+.screen:is(.options-screen, .records-screen) .row-title {
+  color: var(--jon-ink);
+  font-size: 19px;
+  line-height: 20px;
+}
+
+.screen:is(.options-screen, .records-screen) .row-sub {
+  margin: 0;
+  color: var(--jon-muted);
+  font-size: 15px;
+  line-height: 16px;
+}
+
+/* ------------------------------------------------------------
+   Difficulty: five rows 60 tall, padding 0 18, gap 14: the colour bar 8 x 34 (the
+   difficulty-<id> class's --difficulty-color, from style.css), then the name (head 20) and the
+   bonus line
+   ------------------------------------------------------------ */
+
+.options-screen .difficulty-option {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  box-sizing: border-box;
+  min-height: 60px;
+  padding: 0 16px;
+  text-align: left;
+}
+
+.options-screen .difficulty-option .row-bar {
+  flex: none;
+  box-sizing: border-box;
+  width: 8px;
+  height: 34px;
+  border: 2px solid var(--jon-ink);
+  border-radius: 4px;
+  background: var(--difficulty-color);
+}
+
+.options-screen .difficulty-option .row-title {
+  font-size: 20px;
+}
+
+/* ------------------------------------------------------------
+   Music, Volume: two cards 72 tall, padding 12 18. Line 1 the name and the % (head 19, the % muted)
+   at the two ends; line 2 the drawn slider.
+   ------------------------------------------------------------ */
+
+.options-screen .volume-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: 20px 28px;
+  align-items: center;
+  column-gap: 12px;
+  row-gap: 0;
+  box-sizing: border-box;
+  min-height: 72px;
+  padding: 10px 16px;
+}
+
+.options-screen .volume-control > span {
+  grid-area: 1 / 1;
+  min-width: 0;
+  color: var(--jon-ink);
+  font-size: 19px;
+  line-height: 20px;
+}
+
+.options-screen .volume-control > output {
+  grid-area: 1 / 2;
+  color: var(--jon-muted);
+  font-size: 19px;
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* The slider: a 14 px paper track (2 px ink border, radius 8) filled with the accent from the left to
+   --fill (07-options.js sets it on the input on every change, so the fill follows a drag), and a
+   28 px accent knob with a 2.5 px ink rim. The fill's edge always lands under the knob. The input is
+   44 px tall for the finger but pulled into the 28 px line by its margins; the track sits centred. */
+.options-screen .volume-control input[type="range"] {
+  grid-area: 2 / 1 / 3 / 3;
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  width: 100%;
+  height: 44px;
+  margin: -8px 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.options-screen .volume-control input[type="range"]::-webkit-slider-runnable-track {
+  box-sizing: border-box;
+  height: 14px;
+  border: 2px solid var(--jon-ink);
+  border-radius: 8px;
+  background: linear-gradient(to right, var(--jon-blue) var(--fill, 0%), var(--jon-paper) var(--fill, 0%));
+}
+
+/* the thumb sits in the track's 10 px content box: (10 - 28) / 2 = -9 */
+.options-screen .volume-control input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  margin-top: -9px;
+  border: 2.5px solid var(--jon-ink);
+  border-radius: 50%;
+  background: var(--jon-blue);
+  transition: filter 150ms var(--jon-ease);
+}
+
+.options-screen .volume-control input[type="range"]::-moz-range-track {
+  box-sizing: border-box;
+  height: 14px;
+  border: 2px solid var(--jon-ink);
+  border-radius: 8px;
+  background: linear-gradient(to right, var(--jon-blue) var(--fill, 0%), var(--jon-paper) var(--fill, 0%));
+}
+
+.options-screen .volume-control input[type="range"]::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid var(--jon-ink);
+  border-radius: 50%;
+  background: var(--jon-blue);
+}
+
+.options-screen .volume-control input[type="range"]:hover::-webkit-slider-thumb {
+  filter: brightness(1.08);
+}
+
+/* ------------------------------------------------------------
+   Music, Battle music: composer rows 64 tall, padding 0 14, gap 14: the 44 x 44 image (radius 10,
+   2 px ink border, cover; inside the composer's link when there is one, the disc placeholder when
+   there is no icon), then the name and "{n} tracks" (or the locked line; locked rows keep
+   style.css's dimming)
+   ------------------------------------------------------------ */
+
+.options-screen .music-pack-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-sizing: border-box;
+  min-height: 64px;
+  padding: 0 12px;
+}
+
+.options-screen .music-pack-option > :is(.music-composer-link, .music-pack-icon, .music-slot-icon) {
+  display: block;
+  flex: none;
+  box-sizing: border-box;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border: 2px solid var(--jon-ink);
+  border-radius: 10px;
+}
+
+.options-screen .music-pack-option > :is(.music-composer-link, .music-pack-icon) {
+  background: var(--jon-ink);
+  object-fit: cover;
+}
+
+.options-screen .music-pack-option .music-composer-link > .music-pack-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ------------------------------------------------------------
+   Battle art: pack rows 96 tall, padding 0 14, gap 14: the 72 x 72 preview (a 2 x 2 grid on paper,
+   2 px ink border, radius 10, padding 3, gap 2; creeps show their sheet's first frame, towers
+   contain), the name and the artist, and the artist icon (a 40 px circle, 2 px ink border, cover)
+   on the right. Its link is 44 px for the finger. Locked rows keep their placeholder cells and the
+   wood-coloured "In-App Purchase" line.
+   ------------------------------------------------------------ */
+
+.options-screen .art-pack-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-sizing: border-box;
+  min-height: 96px;
+  padding: 0 12px;
+}
+
+.options-screen .art-pack-option .art-thumb-grid {
+  flex: none;
+  box-sizing: border-box;
+  width: 72px;
+  height: 72px;
+  padding: 3px;
+  gap: 2px;
+  border: 2px solid var(--jon-ink);
+  border-radius: 10px;
+  background: var(--jon-paper);
+}
+
+.options-screen .art-pack-option .art-thumb-cell {
+  border: 0;
+}
+
+.options-screen .art-pack-option .art-thumb-cell:not(.locked-placeholder) {
+  background: none;
+}
+
+.options-screen .art-pack-option .art-thumb-cell.locked-placeholder {
+  border-radius: 4px;
+}
+
+.options-screen .art-pack-option .art-thumb-cell :is(img, .art-thumb-sprite) {
+  width: 100%;
+  height: 100%;
+}
+
+.options-screen .art-pack-option > .artist-social-link {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin: 0 -2px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+}
+
+.options-screen .art-pack-option > .artist-social-link > img,
+.options-screen .art-pack-option > img {
+  display: block;
+  flex: none;
+  box-sizing: border-box;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--jon-ink);
+  border-radius: 50%;
+  background: var(--jon-muted);
+  object-fit: cover;
+}
+
+/* the ring turns blue under the pointer, as the badge did (a colour change, nothing moves) */
+.options-screen .art-pack-option > .artist-social-link:hover > img {
+  border-color: var(--jon-blue);
+}
+
+.options-screen .art-pack-option.locked .row-sub {
+  color: var(--jon-wood-dark);
+}
+
+/* ------------------------------------------------------------
+   Records: Career snapshot's 2 x 2 stat cards (72 tall, padding 0 16: the value in Caveat 30, the
+   label head 15 muted); milestone rows 66 tall, padding 0 16 (the name and "x/y" head 17 at the two
+   ends, x/y muted, then an 8 px bar: 1.5 px ink border, radius 5, paper, accent fill to the row's
+   inline width); Top attackers and Top towers rows like milestone rows without the bar (name head
+   17, value head 15 muted; a long line drops under the name).
+   ------------------------------------------------------------ */
+
+.records-screen #records-overview {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.records-screen .stat-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  box-sizing: border-box;
+  min-height: 72px;
+  padding: 0 14px;
+}
+
+.records-screen .stat-card > strong {
+  display: block;
+  color: var(--jon-ink);
+  font-family: var(--jon-font-title);
+  font-size: 30px;
+  line-height: 30px;
+}
+
+.records-screen .stat-card > span {
+  display: block;
+  margin: 0;
+  color: var(--jon-muted);
+  font-size: 15px;
+  line-height: 16px;
+}
+
+.records-screen .milestone-row {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  box-sizing: border-box;
+  min-height: 66px;
+  padding: 0 14px;
+}
+
+.records-screen .milestone-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.records-screen .milestone-head :is(.row-title, .row-sub) {
+  font-size: 17px;
+  line-height: 18px;
+}
+
+.records-screen .milestone-head .row-sub {
+  flex: none;
+}
+
+.records-screen .milestone-bar {
+  display: block;
+  box-sizing: border-box;
+  height: 8px;
+  overflow: hidden;
+  border: 1.5px solid var(--jon-ink);
+  border-radius: 5px;
+  background: var(--jon-paper);
+}
+
+.records-screen .milestone-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--jon-blue);
+}
+
+.records-screen .ranking-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 12px;
+  box-sizing: border-box;
+  min-height: 50px;
+  padding: 6px 14px;
+}
+
+.records-screen .ranking-row .row-title {
+  font-size: 17px;
+  line-height: 18px;
+}
+
+/* ------------------------------------------------------------
+   Screen enter: 180 ms rise and fade each time a screen is shown
+   (setScreen toggles .hidden, which restarts the animation). The menu has its own entrance.
+   ------------------------------------------------------------ */
+
+@keyframes jon-screen-in {
+  from { opacity: 0; translate: 0 10px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+.screen:not(.hidden):not(#game-screen):not(.menu-screen) {
+  animation: jon-screen-in 180ms var(--jon-ease);
+}

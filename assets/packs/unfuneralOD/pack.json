@@ -1,0 +1,367 @@
+{
+  "id": "unfuneralOD",
+  "name": "UnfuneralOD",
+  "picker": {
+    "artist": "UnfuneralOD",
+    "icon": "assets/ui/artist-icons/unfuneralod.png",
+    "instagram": "https://www.instagram.com/unfuneralod/",
+    "quadBackground": "assets/arena/quad-backgrounds/unfuneralod.png",
+    "preview": {
+      "creeps": [
+        "imp",
+        "runner"
+      ],
+      "towers": [
+        "violet",
+        "green"
+      ]
+    }
+  },
+  "chrome": {
+    "mode": "layers",
+    "paperBleed": false
+  },
+  "template": {
+    "assetRoot": "assets/unfuneralod/battlefield-template-v4",
+    "artboardWidth": 1260,
+    "artboardHeight": 1000,
+    "safeOffsetX": 420,
+    "safeOffsetY": 180,
+    "layers": [
+      "01_bleed_area.png",
+      "02_safe_area.png",
+      "03_battlefield.png",
+      "04_tower_dock.png",
+      "05_creep_dock.png",
+      "06_timer_round_panel.png",
+      "07_timer_round_containers.png",
+      "08_score_mana_panel.png",
+      "09_score_mana_containers.png",
+      "10_tower_card_frames.png",
+      "12_creep_card_frames.png",
+      "17_ready_(skips_timer).png"
+    ],
+    "highZLayer": "18_safe_area_high_z.png",
+    "timerFillLayer": "16_timer_fill_rect_24x122.png",
+    "markerPath": "assets/unfuneralod/markers/battlefield-tower-position.png",
+    "markerSize": 48,
+    "towerCardCenters": [
+      {
+        "x": 477,
+        "y": 821
+      },
+      {
+        "x": 553,
+        "y": 821
+      },
+      {
+        "x": 629,
+        "y": 821
+      },
+      {
+        "x": 705,
+        "y": 821
+      },
+      {
+        "x": 781,
+        "y": 821
+      }
+    ],
+    "creepCardCenters": [
+      {
+        "x": 477,
+        "y": 902
+      },
+      {
+        "x": 553,
+        "y": 902
+      },
+      {
+        "x": 629,
+        "y": 902
+      },
+      {
+        "x": 705,
+        "y": 902
+      },
+      {
+        "x": 781,
+        "y": 902
+      }
+    ]
+  },
+  "hud": {
+    "text": {
+      "round": {
+        "size": 16,
+        "color": "#2a2622",
+        "outline": {
+          "width": 0,
+          "color": "#2a2622"
+        }
+      },
+      "time": {
+        "size": 15,
+        "color": "#2a2622",
+        "outline": {
+          "width": 0,
+          "color": "#2a2622"
+        }
+      },
+      "ai": {
+        "size": 16,
+        "color": "#2a2622",
+        "outline": {
+          "width": 0,
+          "color": "#2a2622"
+        }
+      },
+      "mana": {
+        "size": 16,
+        "color": "#2a2622",
+        "outline": {
+          "width": 0,
+          "color": "#2a2622"
+        }
+      },
+      "you": {
+        "size": 16,
+        "color": "#2a2622",
+        "outline": {
+          "width": 0,
+          "color": "#2a2622"
+        }
+      },
+      "ready": {
+        "size": 15,
+        "color": "#2a2622",
+        "outline": {
+          "width": 0.5,
+          "color": "#2a2622"
+        }
+      },
+      "pause": {
+        "size": 15,
+        "color": "#2a2622",
+        "outline": {
+          "width": 0,
+          "color": "#2a2622"
+        }
+      }
+    },
+    "anchors": {
+      "round": {
+        "x": 32,
+        "y": 215
+      },
+      "time": {
+        "x": 32,
+        "y": 384
+      },
+      "ai": {
+        "x": 387,
+        "y": 228
+      },
+      "mana": {
+        "x": 386,
+        "y": 304
+      },
+      "you": {
+        "x": 387,
+        "y": 378
+      }
+    },
+    "timerFill": {
+      "x": 22,
+      "y": 201,
+      "width": 21,
+      "height": 166
+    },
+    "ready": {
+      "x": 9,
+      "y": 412,
+      "width": 54,
+      "height": 27,
+      "art": "button"
+    },
+    "pause": {
+      "x": 361,
+      "y": 412,
+      "width": 54,
+      "height": 27
+    },
+    "midY": 309
+  },
+  "layout": {
+    "popup": {
+      "x": 66,
+      "width": 288,
+      "topY": 170,
+      "maxHeight": 260,
+      "padding": 20
+    }
+  },
+  "ui": {
+    "root": "assets/packs/unfuneralOD/ui",
+    "scale": 2,
+    "pieces": {
+      "panel": {
+        "file": "panel.png",
+        "inset": 28
+      },
+      "card": {
+        "file": "card.png",
+        "inset": 20
+      },
+      "cardSelected": {
+        "file": "card-selected.png",
+        "inset": 20
+      },
+      "buttonMain": {
+        "file": "button-main.png",
+        "inset": 20
+      },
+      "buttonSub": {
+        "file": "button-sub.png",
+        "inset": 20
+      }
+    }
+  },
+  "fonts": {
+    "title": {
+      "family": "Pixelify Sans",
+      "file": "assets/packs/unfuneralOD/fonts/PixelifySans.ttf"
+    },
+    "head": {
+      "family": "Pixelify Sans",
+      "file": "assets/packs/unfuneralOD/fonts/PixelifySans.ttf"
+    },
+    "body": {
+      "family": "Trebuchet MS",
+      "file": null
+    }
+  },
+  "colours": {
+    "ink": "#2a2622",
+    "paper": "#d9cfb5",
+    "paper3": "#bfb398",
+    "accent": "#3fa7d6",
+    "muted": "#5a5248",
+    "gold": "#e8c860",
+    "red": "#c8403a"
+  },
+  "fx": {
+    "root": "assets/packs/unfuneralOD/fx"
+  },
+  "units": {
+    "battlefield": "assets/unfuneralod/arena/arena2.png",
+    "motion": {
+      "imp": "walk",
+      "runner": "walk",
+      "brute": "walk",
+      "wisp": "float",
+      "tank": "roll"
+    },
+    "towers": {
+      "violet": "assets/unfuneralod/towers/violet.png",
+      "yellow": "assets/unfuneralod/towers/yellow.png",
+      "red": "assets/unfuneralod/towers/red.png",
+      "green": "assets/unfuneralod/towers/green.png",
+      "blue": "assets/unfuneralod/towers/blue.png"
+    },
+    "towerFireSheets": {
+      "violet": {
+        "path": "assets/unfuneralod/towers/sheets/violet-fire.png",
+        "frameWidth": 64,
+        "frameHeight": 78,
+        "frames": 4,
+        "duration": 0.24
+      },
+      "yellow": {
+        "path": "assets/unfuneralod/towers/sheets/yellow-fire.png",
+        "frameWidth": 64,
+        "frameHeight": 78,
+        "frames": 4,
+        "duration": 0.24
+      },
+      "red": {
+        "path": "assets/unfuneralod/towers/sheets/red-fire.png",
+        "frameWidth": 64,
+        "frameHeight": 78,
+        "frames": 4,
+        "duration": 0.24
+      },
+      "green": {
+        "path": "assets/unfuneralod/towers/sheets/green-fire.png",
+        "frameWidth": 64,
+        "frameHeight": 78,
+        "frames": 4,
+        "duration": 0.24
+      },
+      "blue": {
+        "path": "assets/unfuneralod/towers/sheets/blue-fire.png",
+        "frameWidth": 64,
+        "frameHeight": 78,
+        "frames": 4,
+        "duration": 0.24
+      }
+    },
+    "attackerIcons": {
+      "imp": null,
+      "runner": null,
+      "brute": null,
+      "wisp": null,
+      "tank": null
+    },
+    "attackerSprites": {
+      "imp": {
+        "path": "assets/unfuneralod/creeps/imp.png",
+        "frameWidth": 64,
+        "frameHeight": 64,
+        "frames": 4,
+        "fps": 6,
+        "renderWidth": 46,
+        "renderHeight": 46,
+        "previewFrame": true
+      },
+      "runner": {
+        "path": "assets/unfuneralod/creeps/runner.png",
+        "frameWidth": 64,
+        "frameHeight": 64,
+        "frames": 4,
+        "fps": 6,
+        "renderWidth": 46,
+        "renderHeight": 46,
+        "previewFrame": true
+      },
+      "brute": {
+        "path": "assets/creeps/brute-sprite-sheet.png",
+        "frameWidth": 270,
+        "frameHeight": 272,
+        "frames": 4,
+        "fps": 6
+      },
+      "wisp": {
+        "path": "assets/creeps/wisp-sprite-sheet.png",
+        "frameWidth": 242,
+        "frameHeight": 260,
+        "frames": 4,
+        "fps": 6
+      },
+      "tank": {
+        "path": "assets/creeps/tank-sprite-sheet.png",
+        "frameWidth": 270,
+        "frameHeight": 302,
+        "frames": 4,
+        "fps": 6
+      }
+    },
+    "creepKillEffect": null,
+    "sideAssets": null
+  },
+  "placeholders": [
+    "ui/*",
+    "fx/*",
+    "fonts/*"
+  ]
+}

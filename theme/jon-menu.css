@@ -1,0 +1,416 @@
+/* ============================================================
+   JON THEME: menu scene
+   The main menu is the battlefield: Jon's arena fills the screen, the title lockup, the wizard and
+   the sorcerer share the height above the 200 px wood dock in three equal gaps (screen top to
+   title, title to figures, figure soles to dock; --menu-gap), and the buttons sit on that dock
+   across the bottom (the wood recipe of the theme's bars).
+   Dock rows: Play Match + Play Online (blue, 64 tall), then a 2 x 2 of paper buttons (Difficulty,
+   Records / Music, Art). One state on #menu-screen, .choosing (Solo Match, Gauntlet), swaps row 1
+   and puts one Back under it, the three gaps equal (--dock-choose-gap); Play Online has no state of its own. Design numbers are CSS px (the 420 x 760 frame
+   mapped onto the full-bleed screen: insets from the sides, the dock from the bottom).
+   Loaded last. Owns everything inside #menu-screen; the screen shell for the other screens
+   (sizing, overlays, top bars) is theme/jon-screens.css. No runtime filter, and nothing here
+   moves on hover: the only motion is the title entrance and the figures' counter-bob.
+   Palette and materials come from theme/jon-chrome.css (the --jon-* variables).
+   ============================================================ */
+
+/* dock geometry (design px): the dock is 200 tall at the bottom; row 1 is 18 below its top and 64
+   tall; the 2 x 2 is 8 below row 1, two 44 px rows 8 apart (96); 14 px of wood stay below it */
+.menu-screen {
+  --dock-h: 200px;
+  --dock-inset: 12px;       /* the buttons' distance from the screen sides */
+  --dock-pad: 18px;         /* dock top to row 1 */
+  --dock-row-h: 64px;       /* row 1: the blue slabs */
+  --dock-gap: 8px;          /* between rows and between buttons */
+  --dock-small-h: 44px;     /* rows 2-3: the paper buttons */
+  --dock-btn-border: 4px;   /* layout border of a dock button; the tile still draws at its own 20 px (border-image-width) */
+  /* while choosing: dock top to row 1, row 1 to Back, and Back to the dock bottom are one equal gap
+     (200 - 64 - 44 = 92, a third of it is 30.67 px) */
+  --dock-choose-gap: calc((var(--dock-h) - var(--dock-row-h) - var(--dock-small-h)) / 3);
+  /* the figures' width: 13rem, shrinking on a short screen (13rem = 208 px is 27.37% of a 760 px height) */
+  --fig: min(13rem, calc(var(--jon-screen-h) * 0.2737));
+  /* the one gap used three times: screen top to title, title to figures, figure soles to dock top.
+     8.856rem is the title's layout height (0.82 x (4.6 + 6.2) rem); 0.8 x --fig is the visible figure
+     height from the soles to the top of the taller drawing (measured from frame 0 of the brute sheets:
+     light art starts 13.3% below the frame top with 6.8% empty under the soles, dark 10.9% / 11.1%;
+     the light figure's 79.9% is the taller). The space above the dock minus those two is split in
+     three equal gaps, floored at 12 px on very short screens. */
+  --menu-gap: max(12px, calc((var(--jon-screen-h) - var(--dock-h) - 8.856rem - 0.8 * var(--fig)) / 3));
+  /* the scene's painted dock (rows 596-760 of menu-scene.png) must stay under the wood dock: the scene is
+     drawn at least tall enough to cover the screen, and on tall screens a little taller, top-anchored, so
+     its painted dock starts 4 px inside the dock's top (where the ink line is) instead of above it */
+  --menu-scene-h: max(
+    var(--jon-screen-h),
+    calc(var(--jon-screen-w) * 760 / 420),
+    calc((var(--jon-screen-h) - var(--dock-h) + 4px) * 760 / 596)
+  );
+}
+
+/* ------------------------------------------------------------
+   The screen is the scene: no overlay, no top bar, no panel
+   ------------------------------------------------------------ */
+
+.menu-screen {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 1fr;
+  align-content: stretch;
+  gap: 0;
+  width: 100%;
+  min-height: calc(var(--app-height) - var(--safe-top) - var(--safe-bottom));
+  padding: 0;
+  background: var(--jon-scene) center top / auto var(--menu-scene-h) no-repeat;
+  color: var(--jon-ink);
+}
+
+/* the menu owns its entrance: the scene, figures and dock paint on the first frame (no screen-wide
+   fade); the title entrance below is the motion. The id and the extra classes outrank jon-screens.css's
+   screen-enter rule (.screen:not(.hidden):not(#game-screen)). */
+#menu-screen.menu-screen.screen:not(.hidden) {
+  animation: none;
+}
+
+/* the other screens dim the scene behind their panels; the menu shows it as drawn */
+.menu-screen::before {
+  display: none;
+}
+
+/* the panel material from jon-chrome.css is switched off: the hero is just a layout box the size of
+   the screen. Only the title is in its grid; the figures and both dock rows are placed absolutely
+   against it (the figures from the top-left box, the rows from the bottom, on the dock). */
+.menu-screen .menu-hero {
+  position: relative;
+  z-index: 1; /* above the dock (::after, z 0), so the wood never covers a button */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  width: 100%;
+  max-width: none;
+  min-height: calc(var(--app-height) - var(--safe-top) - var(--safe-bottom));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-image: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  text-align: center;
+  color: var(--jon-ink);
+}
+
+/* ------------------------------------------------------------
+   Dock: a full-width wood bar, 200 px tall, at the bottom of the screen, built like the theme's
+   other bars (jon-chrome.css "Wood bars"): the wood strip covers it as one background, the wood
+   mask nine-slice clips it to the drawn shape, the ink nine-slice draws its line, all at 24 px.
+   It replaces the old ink rim that was laid over the scene's painted dock. It sits over the scene
+   (and its painted dock, see --menu-scene-h) and under the hero, so under every button.
+   ------------------------------------------------------------ */
+
+.menu-screen::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--dock-h);
+  box-sizing: border-box;
+  border: 24px solid transparent;
+  border-image: var(--jon-frame-wood-ink) 24 / 24px stretch;
+  background: var(--jon-wood-dark) var(--jon-wood-strip) no-repeat center / cover;
+  background-origin: border-box;
+  background-clip: border-box;
+  -webkit-mask-box-image: var(--jon-frame-wood-mask) 24 / 24px stretch;
+  mask-border: var(--jon-frame-wood-mask) 24 / 24px stretch;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------
+   Figures: the wizard (left) and the sorcerer (right, mirrored) stage the lane, --fig wide (13rem),
+   24 px in from each side (symmetric on any width), soles --menu-gap above the dock's top. Their
+   ground shadows are drawn on the container, so the figures bob above a shadow that stays put.
+   ------------------------------------------------------------ */
+
+/* --fig (width) and --menu-gap are set in the variable block at the top, because the title rule
+   uses them too: --fig is 13rem and shrinks on a short screen (27.37% of the height), so the title,
+   figures and dock keep their spacing on short phones. --sole is the soles' height above the screen
+   bottom: the dock plus one gap. */
+.menu-screen .menu-figures {
+  --fig-inset: 24px;
+  --sole: calc(var(--dock-h) + var(--menu-gap));
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  pointer-events: none;
+}
+
+/* the sprite frame is square (style.css: four frames, aspect-ratio 1), so a figure is --fig wide
+   and --fig tall, with the art standing near its bottom edge. --feet is the empty strip under the
+   drawn soles in the frame (light 6.8% of the frame, dark 11.1%), so both pairs of soles land on the
+   same line. z-index 1 keeps them above the shadows. */
+.menu-screen .menu-figure {
+  --feet: calc(var(--fig) * 0.0684);
+  position: absolute;
+  z-index: 1;
+  bottom: calc(var(--sole) - var(--feet));
+  width: var(--fig);
+  animation: jon-bob 1.2s steps(2, jump-none) infinite;
+}
+
+.menu-screen .menu-figure-light {
+  left: var(--fig-inset);
+}
+
+/* the mirror (scaleX(-1)) stays in style.css; the bob uses the separate translate property,
+   so it is never flipped and never touches a hit target */
+.menu-screen .menu-figure-dark {
+  --feet: calc(var(--fig) * 0.1113);
+  right: var(--fig-inset);
+  animation-delay: -0.6s;
+}
+
+/* the ground shadows: flat 120 x 14 ellipses under each figure's soles, on the container
+   (::before for the wizard, ::after for the sorcerer), which never moves. As drawn: 50 px from the
+   side on a 420 screen (4 px outboard of the figure's centre), 6 px of it below the sole line. */
+.menu-screen .menu-figures::before,
+.menu-screen .menu-figures::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  width: 120px;
+  height: 14px;
+  bottom: calc(var(--sole) - 6px);
+  border-radius: 50%;
+  background: rgba(90, 74, 58, 0.22);
+}
+
+.menu-screen .menu-figures::before {
+  left: calc(var(--fig-inset) + var(--fig) / 2 - 64px);
+}
+
+.menu-screen .menu-figures::after {
+  right: calc(var(--fig-inset) + var(--fig) / 2 - 64px);
+}
+
+/* two whole-pixel positions: one figure is down while the other is up, and they swap in steps */
+@keyframes jon-bob {
+  0% { translate: 0 0; }
+  50% { translate: 0 2px; }
+  100% { translate: 0 0; }
+}
+
+/* ------------------------------------------------------------
+   Title: a logo, not a heading. Two stacked lines in the brush font, "Line Tower" 4.6rem and
+   "Wars" 6.2rem, filled with Jon's blue and outlined in ink like his characters, the whole lockup
+   tilted -2deg, its top --menu-gap from the screen top (the same gap as title to figures and
+   figures to dock).
+   ------------------------------------------------------------ */
+
+.menu-screen .title-lockup {
+  grid-row: 1;
+  position: relative;
+  margin: var(--menu-gap) 0 0;
+  padding: 0;
+  font-family: var(--jon-font-title);
+  font-weight: 400; /* the font has one weight */
+  line-height: 0.82; /* tight: the two lines lock up */
+  color: var(--jon-ink);
+  text-align: center;
+  rotate: -2deg;
+}
+
+/* paint-order puts the stroke under the fill, so only its outer half shows and the brush letters
+   don't clog */
+.menu-screen .title-line {
+  display: block;
+  font-size: 4.6rem;
+  white-space: nowrap;
+  color: var(--jon-blue);
+  -webkit-text-stroke: 3px var(--jon-ink);
+  paint-order: stroke fill;
+  text-shadow: 4px 4px 0 var(--jon-ink);
+  animation: jon-title-in 1000ms ease-in-out 120ms both;
+}
+
+.menu-screen .title-line-2 {
+  font-size: 6.2rem;
+  animation-delay: 300ms;
+}
+
+/* each line drops in tilted, lands 2 px low and settles; `both` holds it hidden through its delay.
+   Runs once per screen show: the screen's display toggle restarts it. */
+@keyframes jon-title-in {
+  0% { opacity: 0; translate: 0 -24px; rotate: -3deg; }
+  65% { opacity: 1; translate: 0 2px; rotate: 0.4deg; }
+  100% { opacity: 1; translate: 0 0; rotate: 0deg; }
+}
+
+/* the caption is off on the menu: the records screen carries the same numbers */
+.menu-screen .menu-meta {
+  display: none;
+}
+
+/* ------------------------------------------------------------
+   Dock buttons: ink on blue or ink on paper, never cream on wood. Both rows are placed from the
+   screen bottom, 12 px in from each side:
+   Row 1 (18 px under the dock top, 64 tall): Play Match + Play Online, two blue slabs, head 26.
+     Play Online starts the online search at once (no row of its own).
+     .choosing (after Play Match): Solo Match (#tug-match-btn) and Gauntlet, two across, head 26.
+   Rows 2-3 (8 px under row 1, 2 x 44 with an 8 px gap): Difficulty, Records / Music, Art, paper,
+     head 20, straight on the dock's wood (no strip of their own). While choosing the four are out of
+     the layout and the box shrinks to one 44 px row holding Back, 196 x 44, centred across it.
+     Choosing spaces the dock evenly: row 1 sits --dock-choose-gap (30.67 px) below the dock top and
+     Back the same gap above the dock bottom, leaving that gap between them too.
+   The tiles draw at their native 20 px (border-image-width) over a thin layout border, as the design
+   draws them; the a/b drawings alternate by position (jon-chrome.css) and are pinned per button here.
+   ------------------------------------------------------------ */
+
+.menu-screen .menu-actions {
+  position: absolute;
+  left: var(--dock-inset);
+  right: var(--dock-inset);
+  bottom: calc(var(--dock-h) - var(--dock-pad) - var(--dock-row-h));
+  height: var(--dock-row-h);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: var(--dock-row-h);
+  gap: var(--dock-gap);
+  margin: 0;
+}
+
+.menu-screen .menu-hero .menu-actions button {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0 4px;
+  border-width: var(--dock-btn-border);
+  border-image-width: 20px;
+  font-family: var(--jon-font-head);
+  font-weight: 400; /* the font has one weight; a bold request would only smear it */
+  font-size: 26px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* blue-a / blue-b alternate along each visible row */
+.menu-screen .menu-actions :is(#open-play-btn, #tug-match-btn) {
+  border-image-source: var(--jon-btn-blue-a);
+}
+
+.menu-screen .menu-actions :is(#open-online-btn, #open-gauntlet-btn) {
+  border-image-source: var(--jon-btn-blue-b);
+}
+
+/* while choosing, row 1 moves to --dock-choose-gap below the dock top (its bottom edge is the dock
+   height less that gap and its own height) */
+.menu-screen.choosing .menu-actions {
+  bottom: calc(var(--dock-h) - var(--dock-choose-gap) - var(--dock-row-h));
+}
+
+/* row 1 shows one set at a time: the title pair (Play Match, Play Online) or, while choosing, Solo Match
+   and Gauntlet; both are two across at the same 26 px head */
+.menu-screen:not(.choosing) .menu-actions > .menu-choice,
+.menu-screen.choosing .menu-actions > button:not(.menu-choice) {
+  display: none;
+}
+
+/* the 2 x 2 is a bare box on the dock's wood: jon-chrome.css's strip material (ink, wood, mask) is
+   switched off here */
+.menu-screen .menu-options-entry {
+  position: absolute;
+  left: var(--dock-inset);
+  right: var(--dock-inset);
+  bottom: calc(var(--dock-h) - var(--dock-pad) - var(--dock-row-h) - var(--dock-gap) - 2 * var(--dock-small-h) - var(--dock-gap));
+  height: calc(2 * var(--dock-small-h) + var(--dock-gap));
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, var(--dock-small-h));
+  justify-content: stretch;
+  align-items: stretch;
+  gap: var(--dock-gap);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-image: none;
+  border-radius: 0;
+  background: none;
+  -webkit-mask-box-image: none;
+  mask-border: none;
+  box-shadow: none;
+}
+
+.menu-screen .menu-hero .menu-options-entry button {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0 4px;
+  border-width: var(--dock-btn-border);
+  border-image-width: 20px;
+  font-family: var(--jon-font-head);
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* each small button has a fixed cell in the 2 x 2 */
+.menu-screen .menu-options-entry #open-difficulty-options-btn { grid-area: 1 / 1; }
+.menu-screen .menu-options-entry #open-records-btn { grid-area: 1 / 2; }
+.menu-screen .menu-options-entry #open-music-options-btn { grid-area: 2 / 1; }
+.menu-screen .menu-options-entry #open-art-options-btn { grid-area: 2 / 2; }
+
+/* Back: 196 x 44, centred across the one-row box while choosing; out of the layout otherwise */
+.menu-screen .menu-hero .menu-options-entry #menu-back-btn {
+  grid-area: 1 / 1 / 2 / 3;
+  justify-self: center;
+  align-self: center;
+  width: min(196px, 100%);
+  height: var(--dock-small-h);
+}
+
+.menu-screen:not(.choosing) .menu-options-entry #menu-back-btn {
+  display: none;
+}
+
+/* while choosing, the box is one 44 px row, --dock-choose-gap above the screen bottom, and the four
+   buttons leave the layout (display: none) so they don't force a second row */
+.menu-screen.choosing .menu-options-entry {
+  bottom: var(--dock-choose-gap);
+  height: var(--dock-small-h);
+  grid-template-rows: var(--dock-small-h);
+}
+
+.menu-screen.choosing .menu-options-entry > button:not(.menu-choice) {
+  display: none;
+}
+
+.menu-screen .menu-footer {
+  display: none;
+}
+
+/* published test builds only: the build label (build-info.js) sits small in the top-left corner; 20-main.js
+   unhides it when there is one */
+.menu-screen .build-tag {
+  position: absolute;
+  z-index: 2;
+  top: 8px;
+  left: 12px;
+  margin: 0;
+  font-family: var(--jon-font-head);
+  font-weight: 400;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--jon-ink);
+  opacity: 0.6;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.menu-screen .build-tag[hidden] {
+  display: none;
+}

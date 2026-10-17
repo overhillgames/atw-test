@@ -1,0 +1,801 @@
+{
+  "id": "jonCarlingDark",
+  "name": "Jon Carling Dark",
+  "picker": {
+    "artist": "Jon Carling",
+    "icon": "assets/ui/artist-icons/joncarling.png",
+    "instagram": "https://www.instagram.com/joncarling/",
+    "quadBackground": "assets/arena/quad-backgrounds/joncarling.png",
+    "preview": {
+      "creeps": [
+        "brute",
+        "wisp"
+      ],
+      "towers": [
+        "red",
+        "blue"
+      ]
+    }
+  },
+  "chrome": {
+    "mode": "nineSlice",
+    "paperBleed": true
+  },
+  "template": {
+    "assetRoot": "assets/joncarling/battlefield-template-v4",
+    "artboardWidth": 1260,
+    "artboardHeight": 1000,
+    "safeOffsetX": 420,
+    "safeOffsetY": 180,
+    "layers": [
+      "01_bleed_area.png",
+      "02_safe_area.png",
+      "03_battlefield.png",
+      "04_tower_dock.png",
+      "05_creep_dock.png",
+      "06_timer_round_panel.png",
+      "07_timer_round_containers.png",
+      "08_score_mana_panel.png",
+      "09_score_mana_containers.png",
+      "10_tower_card_frames.png",
+      "12_creep_card_frames.png",
+      "17_ready_(skips_timer).png"
+    ],
+    "timerFillLayer": "16_timer_fill_rect_24x122.png",
+    "markerPath": "assets/joncarling-light/markers/battlefield-tower-position.png",
+    "markerSize": 48,
+    "towerCardCenters": [
+      {
+        "x": 477,
+        "y": 821
+      },
+      {
+        "x": 553,
+        "y": 821
+      },
+      {
+        "x": 629,
+        "y": 821
+      },
+      {
+        "x": 705,
+        "y": 821
+      },
+      {
+        "x": 781,
+        "y": 821
+      }
+    ],
+    "creepCardCenters": [
+      {
+        "x": 477,
+        "y": 902
+      },
+      {
+        "x": 553,
+        "y": 902
+      },
+      {
+        "x": 629,
+        "y": 902
+      },
+      {
+        "x": 705,
+        "y": 902
+      },
+      {
+        "x": 781,
+        "y": 902
+      }
+    ]
+  },
+  "hud": {
+    "text": {
+      "round": {
+        "size": 16,
+        "color": "#141414",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "time": {
+        "size": 15,
+        "color": "#141414",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "ai": {
+        "size": 16,
+        "color": "#141414",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "mana": {
+        "size": 16,
+        "color": "#141414",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "you": {
+        "size": 16,
+        "color": "#141414",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "ready": {
+        "size": 15,
+        "color": "#141414",
+        "outline": {
+          "width": 0.5,
+          "color": "#141414"
+        }
+      },
+      "pause": {
+        "size": 15,
+        "color": "#141414",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      }
+    },
+    "anchors": {
+      "round": {
+        "x": 32,
+        "y": 215
+      },
+      "time": {
+        "x": 32,
+        "y": 384
+      },
+      "ai": {
+        "x": 387,
+        "y": 215
+      },
+      "mana": {
+        "x": 386,
+        "y": 300
+      },
+      "you": {
+        "x": 387,
+        "y": 384
+      }
+    },
+    "timerFill": {
+      "x": 22,
+      "y": 256,
+      "width": 21,
+      "height": 99
+    },
+    "ready": {
+      "x": 5,
+      "y": 427,
+      "width": 54,
+      "height": 37,
+      "art": "button"
+    },
+    "pause": {
+      "x": 359,
+      "y": 427,
+      "width": 54,
+      "height": 37
+    },
+    "midY": 309
+  },
+  "layout": {
+    "columns": [
+      {
+        "x": 4,
+        "y": 188,
+        "width": 60,
+        "height": 242
+      },
+      {
+        "x": 358,
+        "y": 188,
+        "width": 60,
+        "height": 242
+      }
+    ],
+    "statTiles": {
+      "round": {
+        "x": 10,
+        "y": 200,
+        "width": 44,
+        "height": 46
+      },
+      "time": {
+        "x": 10,
+        "y": 369,
+        "width": 44,
+        "height": 46
+      },
+      "ai": {
+        "x": 364,
+        "y": 200,
+        "width": 44,
+        "height": 46
+      },
+      "mana": {
+        "x": 364,
+        "y": 285,
+        "width": 44,
+        "height": 46
+      },
+      "you": {
+        "x": 364,
+        "y": 369,
+        "width": 44,
+        "height": 46
+      }
+    },
+    "statLabels": {
+      "round": {
+        "x": 32,
+        "y": 235,
+        "size": 11,
+        "color": "#5a4a3a",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "time": {
+        "x": 32,
+        "y": 404,
+        "size": 11,
+        "color": "#5a4a3a",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "ai": {
+        "x": 386,
+        "y": 235,
+        "size": 11,
+        "color": "#5a4a3a",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "mana": {
+        "x": 386,
+        "y": 320,
+        "size": 11,
+        "color": "#5a4a3a",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      },
+      "you": {
+        "x": 386,
+        "y": 404,
+        "size": 11,
+        "color": "#5a4a3a",
+        "outline": {
+          "width": 0,
+          "color": "#141414"
+        }
+      }
+    },
+    "timerTile": {
+      "x": 10,
+      "y": 250,
+      "width": 44,
+      "height": 111
+    },
+    "dock": {
+      "x": 0,
+      "y": 587,
+      "width": 420,
+      "height": 173
+    },
+    "popup": {
+      "x": 66,
+      "width": 288,
+      "topY": 170,
+      "maxHeight": 260,
+      "padding": 20
+    },
+    "cardSlots": {
+      "towers": [
+        {
+          "x": 57,
+          "y": 641
+        },
+        {
+          "x": 133,
+          "y": 641
+        },
+        {
+          "x": 209,
+          "y": 641
+        },
+        {
+          "x": 285,
+          "y": 641
+        },
+        {
+          "x": 361,
+          "y": 641
+        }
+      ],
+      "creeps": [
+        {
+          "x": 57,
+          "y": 722
+        },
+        {
+          "x": 133,
+          "y": 722
+        },
+        {
+          "x": 209,
+          "y": 722
+        },
+        {
+          "x": 285,
+          "y": 722
+        },
+        {
+          "x": 361,
+          "y": 722
+        }
+      ]
+    },
+    "cards": {
+      "towers": {
+        "icon": {
+          "x": 0,
+          "y": -10,
+          "width": 40,
+          "height": 48
+        },
+        "role": {
+          "color": "#141414",
+          "outline": {
+            "width": 0,
+            "color": "#141414"
+          },
+          "x": -29,
+          "y": 33,
+          "size": 10
+        },
+        "cost": {
+          "color": "#141414",
+          "outline": {
+            "width": 0,
+            "color": "#141414"
+          },
+          "x": 30,
+          "y": 34,
+          "size": 15
+        }
+      },
+      "creeps": {
+        "icon": {
+          "x": 0,
+          "y": -10,
+          "width": 36,
+          "height": 36
+        },
+        "role": {
+          "color": "#141414",
+          "outline": {
+            "width": 0,
+            "color": "#141414"
+          },
+          "x": -29,
+          "y": 26,
+          "size": 10
+        },
+        "cost": {
+          "color": "#141414",
+          "outline": {
+            "width": 0,
+            "color": "#141414"
+          },
+          "x": 30,
+          "y": 27,
+          "size": 15
+        }
+      }
+    }
+  },
+  "ui": {
+    "root": "assets/packs/jonCarlingLight/ui",
+    "scale": 2,
+    "pieces": {
+      "panel": {
+        "file": "panel.png",
+        "inset": 28
+      },
+      "card": {
+        "file": "card.png",
+        "inset": 20
+      },
+      "cardSelected": {
+        "file": "card-selected.png",
+        "inset": 20
+      },
+      "buttonMain": {
+        "file": "button-main.png",
+        "inset": 20
+      },
+      "buttonSub": {
+        "file": "button-sub.png",
+        "inset": 20
+      },
+      "barInk": {
+        "file": "bar-ink.png",
+        "inset": 24
+      },
+      "barMask": {
+        "file": "bar-mask.png",
+        "inset": 24
+      },
+      "barTile": {
+        "file": "bar-tile.png"
+      }
+    }
+  },
+  "fonts": {
+    "title": {
+      "family": "Caveat Brush",
+      "file": "assets/packs/jonCarlingLight/fonts/CaveatBrush-Regular.ttf"
+    },
+    "head": {
+      "family": "Patrick Hand",
+      "file": "assets/packs/jonCarlingLight/fonts/PatrickHand-Regular.ttf"
+    },
+    "body": {
+      "family": "Trebuchet MS",
+      "file": null
+    }
+  },
+  "colours": {
+    "ink": "#141414",
+    "paper": "#f0e0c8",
+    "paper3": "#dcc9a8",
+    "accent": "#18a0e0",
+    "muted": "#5a4a3a",
+    "gold": "#f0e080",
+    "red": "#d8405a"
+  },
+  "fx": {
+    "root": "assets/packs/jonCarlingLight/fx"
+  },
+  "units": {
+    "battlefield": "assets/joncarling/arena/battlefield_background.png",
+    "motion": {
+      "imp": "walk",
+      "runner": "walk",
+      "brute": "walk",
+      "wisp": "float",
+      "tank": "float"
+    },
+    "towers": {
+      "violet": "assets/joncarling-dark/towers/violet.png",
+      "yellow": "assets/joncarling-dark/towers/yellow.png",
+      "red": "assets/joncarling-dark/towers/red.png",
+      "green": "assets/joncarling-dark/towers/green.png",
+      "blue": "assets/joncarling-dark/towers/blue.png"
+    },
+    "towerFireSheets": {
+      "violet": {
+        "path": "assets/joncarling-dark/towers/sheets/violet-fire.png",
+        "frameWidth": 512,
+        "frameHeight": 624,
+        "frames": 4,
+        "duration": 0.24
+      },
+      "yellow": {
+        "path": "assets/joncarling-dark/towers/sheets/yellow-fire.png",
+        "frameWidth": 512,
+        "frameHeight": 624,
+        "frames": 4,
+        "duration": 0.24
+      },
+      "red": {
+        "path": "assets/joncarling-dark/towers/sheets/red-fire.png",
+        "frameWidth": 512,
+        "frameHeight": 624,
+        "frames": 4,
+        "duration": 0.24
+      },
+      "green": {
+        "path": "assets/joncarling-dark/towers/sheets/green-fire.png",
+        "frameWidth": 512,
+        "frameHeight": 624,
+        "frames": 4,
+        "duration": 0.24
+      },
+      "blue": {
+        "path": "assets/joncarling-dark/towers/sheets/blue-fire.png",
+        "frameWidth": 512,
+        "frameHeight": 624,
+        "frames": 4,
+        "duration": 0.24
+      }
+    },
+    "attackerIcons": {
+      "imp": null,
+      "runner": null,
+      "brute": null,
+      "wisp": null,
+      "tank": null
+    },
+    "attackerSprites": {
+      "imp": {
+        "path": "assets/joncarling-dark/creeps/imp.png",
+        "frameWidth": 512,
+        "frameHeight": 512,
+        "frames": 4,
+        "fps": 6,
+        "renderWidth": 64,
+        "renderHeight": 64,
+        "previewFrame": true
+      },
+      "runner": {
+        "path": "assets/joncarling-dark/creeps/runner.png",
+        "frameWidth": 512,
+        "frameHeight": 512,
+        "frames": 4,
+        "fps": 6,
+        "renderWidth": 64,
+        "renderHeight": 64,
+        "previewFrame": true
+      },
+      "brute": {
+        "path": "assets/joncarling-dark/creeps/brute.png",
+        "frameWidth": 512,
+        "frameHeight": 512,
+        "frames": 4,
+        "fps": 6,
+        "renderWidth": 64,
+        "renderHeight": 64,
+        "previewFrame": true
+      },
+      "wisp": {
+        "path": "assets/joncarling-dark/creeps/wisp.png",
+        "frameWidth": 512,
+        "frameHeight": 512,
+        "frames": 4,
+        "fps": 6,
+        "renderWidth": 64,
+        "renderHeight": 64,
+        "previewFrame": true
+      },
+      "tank": {
+        "path": "assets/joncarling-dark/creeps/tank.png",
+        "frameWidth": 512,
+        "frameHeight": 512,
+        "frames": 4,
+        "fps": 6,
+        "renderWidth": 64,
+        "renderHeight": 64,
+        "previewFrame": true
+      }
+    },
+    "creepKillEffect": {
+      "path": "assets/joncarling/effects/creep-kill-explosion.png",
+      "frameWidth": 97,
+      "frameHeight": 83,
+      "frames": 12,
+      "fps": 12.5,
+      "renderWidth": 78,
+      "renderHeight": 67
+    },
+    "sideAssets": {
+      "player": {
+        "towers": {
+          "violet": "assets/joncarling-dark/towers/violet.png",
+          "yellow": "assets/joncarling-dark/towers/yellow.png",
+          "red": "assets/joncarling-dark/towers/red.png",
+          "green": "assets/joncarling-dark/towers/green.png",
+          "blue": "assets/joncarling-dark/towers/blue.png"
+        },
+        "towerFireSheets": {
+          "violet": {
+            "path": "assets/joncarling-dark/towers/sheets/violet-fire.png",
+            "frameWidth": 512,
+            "frameHeight": 624,
+            "frames": 4,
+            "duration": 0.24
+          },
+          "yellow": {
+            "path": "assets/joncarling-dark/towers/sheets/yellow-fire.png",
+            "frameWidth": 512,
+            "frameHeight": 624,
+            "frames": 4,
+            "duration": 0.24
+          },
+          "red": {
+            "path": "assets/joncarling-dark/towers/sheets/red-fire.png",
+            "frameWidth": 512,
+            "frameHeight": 624,
+            "frames": 4,
+            "duration": 0.24
+          },
+          "green": {
+            "path": "assets/joncarling-dark/towers/sheets/green-fire.png",
+            "frameWidth": 512,
+            "frameHeight": 624,
+            "frames": 4,
+            "duration": 0.24
+          },
+          "blue": {
+            "path": "assets/joncarling-dark/towers/sheets/blue-fire.png",
+            "frameWidth": 512,
+            "frameHeight": 624,
+            "frames": 4,
+            "duration": 0.24
+          }
+        },
+        "attackerSprites": {
+          "imp": {
+            "path": "assets/joncarling-dark/creeps/imp.png",
+            "frameWidth": 512,
+            "frameHeight": 512,
+            "frames": 4,
+            "fps": 6,
+            "renderWidth": 64,
+            "renderHeight": 64,
+            "previewFrame": true
+          },
+          "runner": {
+            "path": "assets/joncarling-dark/creeps/runner.png",
+            "frameWidth": 512,
+            "frameHeight": 512,
+            "frames": 4,
+            "fps": 6,
+            "renderWidth": 64,
+            "renderHeight": 64,
+            "previewFrame": true
+          },
+          "brute": {
+            "path": "assets/joncarling-dark/creeps/brute.png",
+            "frameWidth": 512,
+            "frameHeight": 512,
+            "frames": 4,
+            "fps": 6,
+            "renderWidth": 64,
+            "renderHeight": 64,
+            "previewFrame": true
+          },
+          "wisp": {
+            "path": "assets/joncarling-dark/creeps/wisp.png",
+            "frameWidth": 512,
+            "frameHeight": 512,
+            "frames": 4,
+            "fps": 6,
+            "renderWidth": 64,
+            "renderHeight": 64,
+            "previewFrame": true
+          },
+          "tank": {
+            "path": "assets/joncarling-dark/creeps/tank.png",
+            "frameWidth": 512,
+            "frameHeight": 512,
+            "frames": 4,
+            "fps": 6,
+            "renderWidth": 64,
+            "renderHeight": 64,
+            "previewFrame": true
+          }
+        }
+      },
+      "ai": {
+        "towers": {
+          "violet": "assets/joncarling-light/towers/violet.png",
+          "yellow": "assets/joncarling-light/towers/yellow.png",
+          "red": "assets/joncarling-light/towers/red.png",
+          "green": "assets/joncarling-light/towers/green.png",
+          "blue": "assets/joncarling-light/towers/blue.png"
+        },
+        "towerFireSheets": {
+          "violet": {
+            "path": "assets/joncarling-light/towers/sheets/violet-fire.png",
+            "frameWidth": 512,
+            "frameHeight": 624,
+            "frames": 4,
+            "duration": 0.24
+          },
+          "yellow": {
+            "path": "assets/joncarling-light/towers/sheets/yellow-fire.png",
+            "frameWidth": 512,
+            "frameHeight": 624,
+            "frames": 4,
+            "duration": 0.24
+          },
+          "red": {
+            "path": "assets/joncarling-light/towers/sheets/red-fire.png",
+            "frameWidth": 512,
+            "frameHeight": 624,
+            "frames": 4,
+            "duration": 0.24
+          },
+          "green": {
+            "path": "assets/joncarling-light/towers/sheets/green-fire.png",
+            "frameWidth": 512,
+            "frameHeight": 624,
+            "frames": 4,
+            "duration": 0.24
+          },
+          "blue": {
+            "path": "assets/joncarling-light/towers/sheets/blue-fire.png",
+            "frameWidth": 512,
+            "frameHeight": 624,
+            "frames": 4,
+            "duration": 0.24
+          }
+        },
+        "attackerSprites": {
+          "imp": {
+            "path": "assets/joncarling-light/creeps/imp.png",
+            "frameWidth": 512,
+            "frameHeight": 512,
+            "frames": 4,
+            "fps": 6,
+            "renderWidth": 64,
+            "renderHeight": 64,
+            "previewFrame": true
+          },
+          "runner": {
+            "path": "assets/joncarling-light/creeps/runner.png",
+            "frameWidth": 512,
+            "frameHeight": 512,
+            "frames": 4,
+            "fps": 6,
+            "renderWidth": 64,
+            "renderHeight": 64,
+            "previewFrame": true
+          },
+          "brute": {
+            "path": "assets/joncarling-light/creeps/brute.png",
+            "frameWidth": 512,
+            "frameHeight": 512,
+            "frames": 4,
+            "fps": 6,
+            "renderWidth": 64,
+            "renderHeight": 64,
+            "previewFrame": true
+          },
+          "wisp": {
+            "path": "assets/joncarling-light/creeps/wisp.png",
+            "frameWidth": 512,
+            "frameHeight": 512,
+            "frames": 4,
+            "fps": 6,
+            "renderWidth": 64,
+            "renderHeight": 64,
+            "previewFrame": true
+          },
+          "tank": {
+            "path": "assets/joncarling-light/creeps/tank.png",
+            "frameWidth": 512,
+            "frameHeight": 512,
+            "frames": 4,
+            "fps": 6,
+            "renderWidth": 64,
+            "renderHeight": 64,
+            "previewFrame": true
+          }
+        }
+      }
+    }
+  },
+  "placeholders": []
+}

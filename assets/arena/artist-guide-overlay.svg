@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="760" viewBox="0 0 420 760">
+  <defs>
+    <style>
+      .label { font: 12px Arial, sans-serif; fill: #ffffff; }
+      .small { font: 10px Arial, sans-serif; fill: #d1d5db; }
+      .line { fill: none; stroke-width: 2; }
+      .slot { fill: rgba(34,197,94,0.2); stroke: #22c55e; stroke-width: 2; }
+      .slot-ai { fill: rgba(59,130,246,0.2); stroke: #60a5fa; stroke-width: 2; }
+      .zone { fill: none; stroke: #f59e0b; stroke-width: 2; stroke-dasharray: 6 6; }
+    </style>
+  </defs>
+
+  <!-- Backdrop -->
+  <rect x="0" y="0" width="420" height="760" fill="#0f172a"/>
+
+  <!-- Battlefield edge -->
+  <rect x="1" y="1" width="418" height="758" class="line" stroke="#64748b"/>
+  <text x="10" y="20" class="label">Battlefield Canvas: 420 x 760</text>
+  <text x="10" y="38" class="small">Use this exact ratio for lane skin artwork.</text>
+
+  <!-- Center line -->
+  <line x1="8" y1="380" x2="412" y2="380" class="line" stroke="#cbd5e1" stroke-dasharray="8 6"/>
+  <text x="300" y="372" class="small">Midline (y=50%)</text>
+
+  <!-- Suggested keep-clean UI zones -->
+  <rect x="4" y="290" width="56" height="180" class="zone"/>
+  <text x="8" y="284" class="small">Timer zone</text>
+
+  <rect x="360" y="322" width="56" height="116" class="zone"/>
+  <text x="330" y="316" class="small">Mana zone</text>
+
+  <!-- Lane path -->
+  <line x1="210" y1="700" x2="210" y2="60" class="line" stroke="#eab308" stroke-dasharray="4 4"/>
+  <text x="218" y="84" class="small">Primary lane center</text>
+
+  <!-- AI tower slot anchors -->
+  <circle cx="143" cy="165" r="16" class="slot-ai"/>
+  <circle cx="277" cy="165" r="16" class="slot-ai"/>
+  <circle cx="92" cy="82" r="16" class="slot-ai"/>
+  <circle cx="210" cy="82" r="16" class="slot-ai"/>
+  <circle cx="328" cy="82" r="16" class="slot-ai"/>
+  <text x="10" y="108" class="label">AI tower slots</text>
+
+  <!-- Player tower slot anchors -->
+  <circle cx="143" cy="595" r="16" class="slot"/>
+  <circle cx="277" cy="595" r="16" class="slot"/>
+  <circle cx="92" cy="678" r="16" class="slot"/>
+  <circle cx="210" cy="678" r="16" class="slot"/>
+  <circle cx="328" cy="678" r="16" class="slot"/>
+  <text x="10" y="742" class="label">Player tower slots</text>
+
+  <!-- Safe framing hint -->
+  <rect x="16" y="16" width="388" height="728" class="line" stroke="#22d3ee" stroke-dasharray="10 6"/>
+  <text x="22" y="734" class="small">Keep critical background detail inside cyan frame.</text>
+</svg>

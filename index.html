@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Line Tower Wars</title>
+  <script>
+    (() => {
+      if (window.location.protocol !== "file:") {
+        return;
+      }
+
+      const previewUrl = "http://127.0.0.1:5500/";
+      const probe = new Image();
+      let redirected = false;
+
+      probe.onload = () => {
+        redirected = true;
+        window.location.replace(previewUrl);
+      };
+      probe.src = `${previewUrl}assets/battlefield-template-v3/03_battlefield.png?probe=${Date.now()}`;
+
+      window.addEventListener("DOMContentLoaded", () => {
+        window.setTimeout(() => {
+          if (redirected || window.location.protocol !== "file:") {
+            return;
+          }
+          document.body.innerHTML = `
+            <main class="app-shell">
+              <section class="panel" style="max-width: 34rem; margin: 3rem auto; padding: 1.25rem; line-height: 1.45;">
+                <p class="eyebrow">Preview Required</p>
+                <h1 style="margin: 0 0 0.75rem;">Open the local preview server</h1>
+                <p>Direct file mode cannot render the Pixi battle art because browsers block local images from WebGL.</p>
+                <p>Run <code>.\\preview.ps1</code>, then open <a href="${previewUrl}">${previewUrl}</a>.</p>
+              </section>
+            </main>
+          `;
+        }, 900);
+      });
+    })();
+  </script>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="theme/jon-chrome.css" />
+  <link rel="stylesheet" href="theme/jon-screens.css" />
+  <link rel="stylesheet" href="theme/jon-menu.css" />
+  <link rel="stylesheet" href="theme/jon-dialogs.css" />
+  <link rel="stylesheet" href="theme/jon-battle.css" />
+</head>
+<body>
+  <section class="loading-animatic" id="loading-animatic" aria-label="Loading sequence">
+    <div class="loading-animatic-frame" id="loading-animatic-frame">
+      <video
+        class="loading-animatic-video"
+        id="loading-animatic-video"
+        autoplay
+        playsinline
+        preload="auto"
+      ></video>
+    </div>
+    <button class="loading-animatic-skip" id="loading-animatic-skip-btn" type="button" aria-label="Skip intro">Skip</button>
+  </section>
+
+  <main class="app-shell" id="app-shell">
+    <section class="orientation-notice hidden" id="orientation-notice" aria-live="polite">
+      <div class="orientation-card">
+        <p class="eyebrow">Portrait Required</p>
+        <h2>Keep your device upright</h2>
+        <p>Line Tower Wars is tuned for portrait play with large tap targets and a fixed battlefield view.</p>
+      </div>
+    </section>
+    <section class="screen menu-screen" id="menu-screen" aria-labelledby="menu-title">
+      <p id="build-tag" class="build-tag" hidden></p>
+      <div class="menu-hero">
+        <div class="menu-figures" aria-hidden="true"><span class="menu-figure menu-figure-light"></span><span class="menu-figure menu-figure-dark"></span></div>
+        <h1 id="menu-title" class="title-lockup"><span class="title-line">Line Tower</span><span class="title-line title-line-2">Wars</span></h1>
+        <div class="menu-actions">
+          <button id="open-play-btn" type="button">Play Match</button>
+          <button id="open-online-btn" type="button">Play Online</button>
+          <button id="tug-match-btn" class="menu-choice" type="button">Solo Match</button>
+          <button id="open-gauntlet-btn" class="menu-choice" type="button">Gauntlet</button>
+        </div>
+        <div class="menu-meta" id="menu-meta"></div>
+        <div class="menu-options-entry">
+          <button id="open-difficulty-options-btn" class="secondary" type="button">Difficulty</button>
+          <button id="open-records-btn" class="secondary" type="button">Records</button>
+          <button id="open-music-options-btn" class="secondary" type="button">Music</button>
+          <button id="open-art-options-btn" class="secondary" type="button">Art</button>
+          <button id="menu-back-btn" class="secondary menu-choice" type="button">Back</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="screen options-screen hidden" id="difficulty-options-screen" aria-labelledby="difficulty-options-title">
+      <header class="jon-topbar">
+        <h1 id="difficulty-options-title">Difficulty</h1>
+      </header>
+      <div class="jon-content">
+        <section class="panel options-panel" aria-labelledby="difficulty-title">
+          <div class="panel-header">
+            <h2 id="difficulty-title">AI difficulty</h2>
+            <p id="difficulty-summary">Choose how sharply the AI drafts, attacks, and upgrades.</p>
+          </div>
+          <div class="difficulty-list" id="difficulty-list" role="radiogroup" aria-labelledby="difficulty-title">
+            <button class="difficulty-option difficulty-purple" type="button" role="radio" aria-checked="false" data-difficulty="purple" aria-label="Easy difficulty">
+              <span class="row-bar"></span>
+              <span class="row-text">
+                <span class="row-title">Easy</span>
+                <span class="row-sub difficulty-bonus"></span>
+              </span>
+            </button>
+            <button class="difficulty-option difficulty-yellow" type="button" role="radio" aria-checked="false" data-difficulty="yellow" aria-label="Medium difficulty">
+              <span class="row-bar"></span>
+              <span class="row-text">
+                <span class="row-title">Medium</span>
+                <span class="row-sub difficulty-bonus"></span>
+              </span>
+            </button>
+            <button class="difficulty-option difficulty-red" type="button" role="radio" aria-checked="false" data-difficulty="red" aria-label="Hard difficulty">
+              <span class="row-bar"></span>
+              <span class="row-text">
+                <span class="row-title">Hard</span>
+                <span class="row-sub difficulty-bonus"></span>
+              </span>
+            </button>
+            <button class="difficulty-option difficulty-green" type="button" role="radio" aria-checked="false" data-difficulty="green" aria-label="Very Hard difficulty">
+              <span class="row-bar"></span>
+              <span class="row-text">
+                <span class="row-title">Very Hard</span>
+                <span class="row-sub difficulty-bonus"></span>
+              </span>
+            </button>
+            <button class="difficulty-option difficulty-blue" type="button" role="radio" aria-checked="false" data-difficulty="blue" aria-label="Ludicrous difficulty">
+              <span class="row-bar"></span>
+              <span class="row-text">
+                <span class="row-title">Ludicrous</span>
+                <span class="row-sub difficulty-bonus"></span>
+              </span>
+            </button>
+          </div>
+        </section>
+      </div>
+      <div class="jon-backbar"><button class="options-back-btn secondary" type="button">Back</button></div>
+    </section>
+
+    <section class="screen options-screen hidden" id="music-options-screen" aria-labelledby="music-options-title">
+      <header class="jon-topbar">
+        <h1 id="music-options-title">Music</h1>
+      </header>
+      <div class="jon-content">
+        <section class="panel options-panel music-options-panel" aria-labelledby="music-volume-title">
+          <div class="panel-header">
+            <h2 id="music-volume-title">Volume</h2>
+            <p>Balance background music and sound effects.</p>
+          </div>
+          <div class="volume-controls">
+            <label class="volume-control" for="music-volume-slider">
+              <span>Music</span>
+              <input id="music-volume-slider" type="range" min="0" max="100" step="1" />
+              <output id="music-volume-value" for="music-volume-slider">40%</output>
+            </label>
+            <label class="volume-control" for="sfx-volume-slider">
+              <span>Sound effects</span>
+              <input id="sfx-volume-slider" type="range" min="0" max="100" step="1" />
+              <output id="sfx-volume-value" for="sfx-volume-slider">85%</output>
+            </label>
+          </div>
+        </section>
+
+        <section class="panel options-panel music-options-panel" aria-labelledby="music-title">
+          <div class="panel-header">
+            <h2 id="music-title">Battle music</h2>
+            <p id="music-summary">Pick a composer for battle music.</p>
+          </div>
+          <div class="music-pack-grid" id="music-pack-grid" role="radiogroup" aria-labelledby="music-title"></div>
+        </section>
+      </div>
+      <div class="jon-backbar"><button class="options-back-btn secondary" type="button">Back</button></div>
+    </section>
+
+    <section class="screen options-screen hidden" id="art-options-screen" aria-labelledby="art-options-title">
+      <header class="jon-topbar">
+        <h1 id="art-options-title">Battle art</h1>
+      </header>
+      <div class="jon-content">
+        <section class="panel options-panel art-options-panel" aria-labelledby="art-title">
+          <div class="panel-header">
+            <h2 id="art-title">Art pack</h2>
+            <p id="art-summary">The battlefield, towers, creeps, effects and battle UI all come from the pack.</p>
+          </div>
+          <div class="art-pack-grid" id="art-pack-grid" role="radiogroup" aria-labelledby="art-title"></div>
+        </section>
+      </div>
+      <div class="jon-backbar"><button class="options-back-btn secondary" type="button">Back</button></div>
+    </section>
+
+    <section class="screen gauntlet-screen hidden" id="gauntlet-screen" aria-label="Gauntlet">
+      <header class="jon-topbar"><h1>Gauntlet</h1></header>
+      <div class="gauntlet-map-viewport" id="gauntlet-map-viewport">
+        <div class="gauntlet-map-track" id="gauntlet-map-track">
+          <img class="gauntlet-layer gauntlet-layer-map" src="assets/ui/jon-theme/gauntlet-map.png" alt="" />
+          <div class="gauntlet-marker-layer" id="gauntlet-marker-layer"></div>
+          <div class="gauntlet-orb" id="gauntlet-orb" aria-hidden="true"></div>
+        </div>
+      </div>
+      <div class="gauntlet-controls">
+        <button id="gauntlet-back-btn" class="secondary" type="button">Back</button>
+        <button id="gauntlet-start-btn" type="button">Engage</button>
+      </div>
+    </section>
+
+    <section class="screen records-screen hidden" id="records-screen" aria-label="Records">
+      <header class="jon-topbar">
+        <h1>Records</h1>
+      </header>
+      <div class="jon-content">
+        <section class="records-grid" aria-label="Progress details">
+          <article class="panel stats-panel">
+            <div class="panel-header">
+              <h2>Career snapshot</h2>
+              <p id="records-updated-at">No saved data yet.</p>
+            </div>
+            <div class="overview-grid" id="records-overview"></div>
+          </article>
+
+          <article class="panel milestones-panel">
+            <div class="panel-header">
+              <h2>Milestones</h2>
+            </div>
+            <div class="milestone-list" id="records-milestones"></div>
+          </article>
+
+          <article class="panel rankings-panel">
+            <div class="panel-header">
+              <h2>Top attackers</h2>
+              <p>Most successful scoring units across all matches.</p>
+            </div>
+            <div class="ranking-list" id="records-top-attackers"></div>
+          </article>
+
+          <article class="panel rankings-panel">
+            <div class="panel-header">
+              <h2>Top towers</h2>
+              <p>Your most reliable eliminators across every match.</p>
+            </div>
+            <div class="ranking-list" id="records-top-towers"></div>
+          </article>
+        </section>
+      </div>
+      <div class="jon-backbar"><button id="records-back-btn" class="secondary" type="button">Back</button></div>
+    </section>
+
+    <section class="screen game-screen hidden" id="game-screen" aria-label="Game screen">
+      <section class="arena-zone">
+        <div class="arena-wrap" id="arena-drop-zone">
+          <div id="pixi-viewport" aria-label="Battle viewport"></div>
+          <div class="slot-row enemy-slots" id="enemy-slots"></div>
+          <canvas id="arena-canvas" width="420" height="760" aria-label="Battlefield"></canvas>
+          <div class="timer-widget" aria-label="Wave timer">
+            <div class="round-widget" aria-label="Round">
+              <span>Round</span>
+              <strong id="wave-number">1</strong>
+              <span class="connection-dot hidden" id="connection-dot" aria-hidden="true"></span>
+            </div>
+            <div class="timer-track">
+              <div class="timer-fill" id="wave-progress-fill"></div>
+            </div>
+            <div class="timer-text">
+              <span id="phase-label">Prep</span>
+              <strong id="phase-timer">10.0</strong>
+            </div>
+            <button class="battle-skip-btn" id="battle-skip-btn" type="button">Battle</button>
+          </div>
+          <div class="mana-stack" aria-label="Mana and score">
+            <div class="score-widget opponent-score-widget" aria-label="Opponent score">
+              <span id="opponent-label">AI</span>
+              <strong id="ai-score">0</strong>
+            </div>
+            <div class="mana-widget" aria-label="Player mana">
+              <img class="mana-icon" src="assets/ui/mana-icon.png" alt="" />
+              <span class="mana-value" id="player-mana">9</span>
+            </div>
+            <div class="score-widget player-score-widget" aria-label="Player score">
+              <span>Player</span>
+              <strong id="player-score">0</strong>
+            </div>
+          </div>
+          <button class="floating-pause-btn" id="floating-pause-btn" type="button">Pause</button>
+          <button class="ready-btn" id="ready-btn" type="button">Ready</button>
+          <section class="shop-overlay hidden" id="shop-overlay" aria-label="Upgrade shop">
+            <div class="shop-card">
+              <div class="shop-header">
+                <div>
+                  <p class="shop-kicker">Between Rounds</p>
+                  <h2 id="shop-title">Upgrade one card</h2>
+                </div>
+                <div class="mana-widget shop-mana-widget" aria-label="Player mana">
+                  <img class="mana-icon" src="assets/ui/mana-icon.png" alt="" />
+                  <span class="mana-value" id="shop-mana-value">9</span>
+                </div>
+              </div>
+              <p class="shop-copy">Choose one attacker or tower card to strengthen before the next round begins.</p>
+              <div class="shop-preview">
+                <div class="shop-preview-label">Upgrade</div>
+                <div class="shop-preview-panel">
+                  <div class="shop-unit-name" id="shop-unit-name">Imp</div>
+                  <div class="shop-upgrade-flow">
+                    <div class="shop-unit-frame">
+                      <div class="attacker-icon-frame shop-icon-frame">
+                        <img class="attacker-icon-sheet shop-icon-sheet" id="shop-current-unit" src="assets/creeps/imp-sprite-sheet.png" alt="Current unit preview" />
+                      </div>
+                      <span class="shop-level" id="shop-level-current">Lv. 1</span>
+                    </div>
+                    <div class="shop-arrow" aria-hidden="true">→</div>
+                    <div class="shop-unit-frame">
+                      <div class="attacker-icon-frame shop-icon-frame shop-icon-frame-upgraded">
+                        <img class="attacker-icon-sheet shop-icon-sheet" id="shop-next-unit" src="assets/creeps/imp-sprite-sheet.png" alt="Upgraded unit preview" />
+                      </div>
+                      <span class="shop-level" id="shop-level-next">Lv. 2</span>
+                    </div>
+                  </div>
+                  <p class="shop-description" id="shop-description">Increase HP and speed by 10% for future Imps.</p>
+                </div>
+              </div>
+              <div class="shop-actions">
+                <button id="shop-upgrade-btn" type="button">Upgrade for 3 mana</button>
+                <button id="shop-start-btn" type="button">Start Round 2</button>
+              </div>
+            </div>
+          </section>
+          <section class="match-end-overlay hidden" id="match-end-overlay" aria-label="Match result">
+            <div class="match-summary-card">
+              <p class="eyebrow" id="match-result-eyebrow">Match Complete</p>
+              <h2 id="match-result-title">Victory</h2>
+              <p class="match-result-copy" id="match-result-copy">You controlled the lane and closed the match with a late push.</p>
+              <div class="match-summary-grid" id="match-summary-grid"></div>
+              <p class="match-next-goal" id="match-next-goal">Next goal: win two matches in a row.</p>
+              <div class="match-actions">
+                <button id="match-continue-btn" class="hidden" type="button">Continue</button>
+                <button id="match-play-again-btn" type="button">Play Again</button>
+                <button id="match-home-btn" class="secondary" type="button">Return to Menu</button>
+              </div>
+            </div>
+          </section>
+          <section class="pause-overlay hidden" id="pause-overlay" aria-label="Paused">
+            <div class="pause-card">
+              <h2>Paused</h2>
+              <div class="pause-actions">
+                <button id="pause-resume-btn" type="button">Resume</button>
+                <button id="pause-menu-btn" class="secondary" type="button">Quit</button>
+              </div>
+            </div>
+          </section>
+          <section class="pause-overlay quit-overlay hidden" id="quit-overlay" aria-label="Quit match?">
+            <div class="pause-card">
+              <h2>Quit match?</h2>
+              <div class="pause-actions">
+                <button id="quit-confirm-btn" type="button">Yes</button>
+                <button id="quit-cancel-btn" class="secondary" type="button">No</button>
+              </div>
+            </div>
+          </section>
+          <div class="slot-row player-slots" id="player-slots"></div>
+        </div>
+      </section>
+
+      <footer class="bottom-bar">
+        <div class="card-docks">
+          <section class="dock dock-towers" id="tower-dock" aria-label="Tower cards">
+            <div class="dock-header">
+              <h2>Towers</h2>
+              <p>Place up to five defenses.</p>
+            </div>
+            <div class="tower-panel" id="tower-panel"></div>
+          </section>
+          <section class="dock" aria-label="Attacker cards">
+            <div class="dock-header">
+              <h2>Attackers</h2>
+              <p>Queue units for the next wave.</p>
+            </div>
+            <div class="attacker-panel" id="attacker-panel"></div>
+          </section>
+        </div>
+        <div class="action-row">
+          <button id="replay-btn" type="button">Menu</button>
+          <span id="status-text">Start a match, build your lane, and send the next wave.</span>
+          <button id="pause-btn" type="button">Pause</button>
+        </div>
+      </footer>
+    </section>
+  </main>
+
+  <script src="vendor/pixi.min.js"></script>
+  <script src="build-info.js"></script>
+  <script src="game/01-defs.js"></script>
+  <script src="game/02a-pack-manifests.js"></script>
+  <script src="game/02-art-packs.js"></script>
+  <script src="game/03-config.js"></script>
+  <script src="game/04-state.js"></script>
+  <script src="game/05-layout.js"></script>
+  <script src="game/06-stats.js"></script>
+  <script src="game/07-options.js"></script>
+  <script src="game/08-gauntlet.js"></script>
+  <script src="game/09-menu.js"></script>
+  <script src="game/10-match.js"></script>
+  <script src="game/11-cards.js"></script>
+  <script src="game/12-rounds.js"></script>
+  <script src="game/13-ai.js"></script>
+  <script src="game/14-battle.js"></script>
+  <script src="game/15-audio.js"></script>
+  <script src="game/16-effects.js"></script>
+  <script src="game/17-pixi-scene.js"></script>
+  <script src="game/18-pixi-cards.js"></script>
+  <script src="game/18a-pixi-chrome.js"></script>
+  <script src="game/18b-pixi-units.js"></script>
+  <script src="game/19-draw.js"></script>
+  <script src="game/tug/rules.js"></script>
+  <script src="game/tug/sim.js"></script>
+  <script src="game/tug/bot.js"></script>
+  <script src="game/tug/tug-pixi.js"></script>
+  <script src="game/tug/tug-mode.js"></script>
+  <script src="game/tug/tug-net.js"></script>
+  <script src="game/20-main.js"></script>
+
+  <!-- Firebase compat SDK (v10) — required for multiplayer -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+  <!-- Multiplayer layer — must load after Firebase SDK and after the game/ scripts -->
+  <script src="multiplayer.js"></script>
+  <script src="lobby.js"></script>
+  <script>
+    (() => {
+      const fallbackActions = {
+        "open-play-btn": () => window.openPlayChoice?.(),
+        "open-online-btn": () => window.tugNetPlayOnline?.(),
+        "menu-back-btn": () => window.closePlayChoice?.(),
+        "open-gauntlet-btn": () => window.setScreen?.("gauntlet"),
+        "open-records-btn": () => window.setScreen?.("records"),
+        "open-difficulty-options-btn": () => window.setScreen?.("difficultyOptions"),
+        "open-music-options-btn": () => window.setScreen?.("musicOptions"),
+        "open-art-options-btn": () => window.setScreen?.("artOptions"),
+        "gauntlet-back-btn": () => window.setScreen?.("menu"),
+        "gauntlet-start-btn": () => window.startGauntletChallenge?.(),
+        "records-back-btn": () => window.setScreen?.("menu"),
+        "match-continue-btn": () => window.continueFromMatchResults?.(),
+        "match-play-again-btn": () => (window.tugNetPlayAgainOnline?.() || window.startNewMatch?.()),
+        "match-home-btn": () => window.setScreen?.("menu")
+      };
+
+      document.addEventListener("click", (event) => {
+        const button = event.target.closest("button");
+        const action = button && fallbackActions[button.id];
+        if (!action) {
+          if (button?.classList.contains("options-back-btn")) {
+            window.setScreen?.("menu");
+          }
+          return;
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        action();
+      }, true);
+    })();
+  </script>
+</body>
+</html>
