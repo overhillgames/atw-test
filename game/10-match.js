@@ -231,6 +231,7 @@ function startNewMatch(options = {}) {
   const mode = options.mode || (state.screen === "game" && state.mode === "tug" ? "tug" : "classic");
   clearSavedMatchState();
   resetMatch();
+  setOpponentArtPack(options.net && typeof options.net === "object" ? options.net.opponentPack : null); // online: the opponent's own pack on the ai side; every other match: the pack's own ai side
   state.gauntletRun = options.gauntlet
     ? { stageIndex: clamp(Math.floor(Number(options.stageIndex) || 0), 0, GAUNTLET_STAGES.length - 1) }
     : null;

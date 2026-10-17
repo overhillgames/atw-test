@@ -18,10 +18,10 @@
 // name and line, a "! ready" pill; a tap calls tugTabTap(slot) when tappable) or in tower mode four 96x60 trait
 // frames (frames[]: three traits and Heal, the card tile or cardSelected while lit, the word, a rank row of pips and
 // "rank/cap" or Heal's sub, a hint while lit, muted while dim, and a white light sweeping each lit frame on the
-// animation clock), then in both modes tug's own five mob cards (dock.mobs[]: a coin and the cost, red while poor;
-// the attacker's sheet frame; the role word; a "×n" pill while some are queued; blocked fades the sprite and mutes the
-// role; a tap calls tugQueueMob(id), and tugPxFlashMob(id), which tug-mode.js calls on a queued mob, flashes the card
-// with classic's flashPixiCard timing). Every tile is the pack's card / cardSelected nine-slice, drawn on every pack.
+// animation clock), then in both modes tug's own five mob cards (dock.mobs[]: a coin badge with the cost on the card's
+// top-left corner, red while poor; the attacker's sheet frame; the role word, scaled to fit; a "×n" pill while some
+// are queued; blocked fades the sprite and mutes the role; a tap calls tugQueueMob(id), and tugPxFlashMob(id), which
+// tug-mode.js calls on a queued mob, flashes the card with classic's flashPixiCard timing). Every tile is the pack's card / cardSelected nine-slice, drawn on every pack.
 // Then it calls tugUpdateHud() (tug-mode.js, which hides classic's rails and HUD numbers and publishes tugState.hud =
 // { gold, time, goldPopT0 }) and draws that HUD in one container on textLayer, shown while tugState.hud exists: the
 // clock chip top-left ("m:ss" on a card tile), the gold chip bottom-right (a coin and the number centred as a pair,
@@ -68,13 +68,13 @@ const TUG_PX_WOOD_STROKE = 2;
 const TUG_PX_TITLE = { x: 12, y: 607, width: 396, height: 22, size: 15 };
 // units mode: two turret tabs (left xs, top y). A tab: the tower sprite (contain-fit in sprite.width x sprite.height,
 // its left at tab left + sprite.dx, vertically centred; alpha buildingAlpha while building), the text column at
-// tab left + textDx (textDxBare without a sprite): name centred on nameCy, line on lineCy, both left-anchored; the
-// "! ready" pill (pill.height tall, pill.padX + pill.border either side of its word, its right edge pill.right in
+// tab left + textDx: name centred on nameCy, line on lineCy, both left-anchored (without a sprite, empty and rubble,
+// both are centred horizontally in the tab instead); the "! ready" pill (pill.height tall, pill.padX + pill.border either side of its word, its right edge pill.right in
 // from the tab's, centred on pill.cy) drawn above the text
 const TUG_PX_TAB = {
   xs: [6, 214], y: 630, width: 200, height: 60,
   sprite: { dx: 10, width: 34, height: 42 }, buildingAlpha: 0.5,
-  textDx: 52, textDxBare: 10, nameCy: 651.5, nameSize: 16, lineCy: 668.5, lineSize: 14,
+  textDx: 52,nameCy: 651.5, nameSize: 16, lineCy: 668.5, lineSize: 14,
   pill: { text: "! ready", size: 14, height: 22, padX: 7, border: 2, radius: 11, right: 8, cy: 660 }
 };
 // tower mode: four frames (three traits + Heal), 96 x 60 centred on (xs[i], cy). Each line's centre is cy + its dy:
@@ -95,16 +95,19 @@ const TUG_PX_SHIMMER = {
   stagger: 0.18, period: 1.9, move: 0.55, startFrac: 0.55, travel: 4.2,
   rgb: "255, 252, 240", peak: 0.95, textureWidth: 128, textureHeight: 4
 };
-// the five mob cards under the tabs / frames: card i's top-left at (x0 + pitch * i, y), width x height. The cost: a
-// coin (coinD across its outer edge, ring coinRing) centred on (left + coinDx, costCy), the number left-anchored at
-// left + costDx on costCy. The sheet preview (frame 0) sprite x sprite centred on (cx, spriteCy). The role word
-// centred, its bottom on roleBottom. The count pill ("×n"): pill.height tall, at least pill.minWidth wide, pill.padX +
-// pill.border either side of its word, its top on pill.top, its right edge pill.dx past the card's (at most maxRight).
-// blocked: the sprite at blockedAlpha and the role muted. The tap flash: a paper round rect inset flash.inset
-// (radius flash.radius, alpha flash.alpha), flashPixiCard's timing.
+// the five mob cards under the tabs / frames: card i's top-left at (x0 + pitch * i, y), width x height. The cost badge
+// on the top-left corner: a coin (badge.d across its outer edge, ring badge.ring) centred on (left + badge.dx,
+// badge.cy), the number centred on the same point at badge.size, scaled down to fit badge.d - 2 * badge.pad. The
+// badge's left edge is the card's left edge (dx = d / 2 + 1), because the previous card's pill ends exactly there
+// (pill.dx 7 = pitch - width), so the two never overlap. The sheet preview (frame 0) sprite x sprite centred on (cx,
+// spriteCy). The role word centred, its bottom on roleBottom, scaled down to fit width - 2 * rolePad (never up). The
+// count pill ("×n"): pill.height tall, at least pill.minWidth wide, pill.padX + pill.border either side of its word,
+// its top on pill.top, its right edge pill.dx past the card's (at most maxRight). blocked: the sprite at blockedAlpha
+// and the role muted. The tap flash: a paper round rect inset flash.inset (radius flash.radius, alpha flash.alpha),
+// flashPixiCard's timing.
 const TUG_PX_MOB = {
   x0: 6, pitch: 83, y: 694, width: 76, height: 62,
-  coinD: 10, coinRing: 1.5, coinDx: 12, costDx: 20, costCy: 702, costSize: 16,
+  badge: { d: 24, ring: 2, dx: 13, cy: 700, size: 16, pad: 3 }, rolePad: 4,
   sprite: 36, spriteCy: 721, roleSize: 14, roleBottom: 752, blockedAlpha: 0.4,
   pill: { size: 15, height: 26, minWidth: 26, padX: 4, border: 2, radius: 13, top: 687, dx: 7, maxRight: 420 },
   flash: { inset: 3, radius: 8, alpha: 0.5, offMs: 85, againMs: 145, endMs: 230, againAlpha: 0.72 }
@@ -182,6 +185,15 @@ function tugPxText(text, size, fill, strokeColour, strokeWidth) {
 function tugPxSetText(node, text) {
   if (node.text !== text) {
     node.text = text;
+  }
+}
+
+// Scale a text node down (uniformly) so it is at most maxWidth wide; never up.
+function tugPxFitWidth(node, maxWidth) {
+  node.scale.set(1);
+  const w = node.width;
+  if (w > maxWidth && w > 0) {
+    node.scale.set(maxWidth / w);
   }
 }
 
@@ -1074,7 +1086,7 @@ function tugPxDrawPill(rec) {
 }
 
 // One tab from its model (null: hidden, not tappable). A built or building tab shows its turret's sprite (faded while
-// building); empty and rubble show none and mute the name too.
+// building); empty and rubble show none, centre the name and line in the tab, and mute the name too.
 function tugPxSyncTab(rec, t) {
   const B = TUG_PX_TAB;
   const on = !!t;
@@ -1115,9 +1127,12 @@ function tugPxSyncTab(rec, t) {
 
   tugPxSetText(rec.name, tugPxStr(t.name));
   tugPxSetText(rec.line, tugPxStr(t.line));
-  const textX = rec.x + (rec.sprite ? B.textDx : B.textDxBare);
+  const textX = rec.sprite ? rec.x + B.textDx : rec.x + B.width / 2; // the x alone tells left from centred
   if (textX !== rec.textX) {
     rec.textX = textX;
+    const anchorX = rec.sprite ? 0 : 0.5;
+    rec.name.anchor.set(anchorX, 0.5);
+    rec.line.anchor.set(anchorX, 0.5);
     rec.name.position.set(textX, B.nameCy);
     rec.line.position.set(textX, B.lineCy);
   }
@@ -1348,9 +1363,10 @@ function tugPxCoin(g, x, y, d, ring) {
   return g;
 }
 
-// A mob card, built once per attackerDefs entry: the card tile, the attacker sheet's frame 0, the cost coin and
-// number, the role word, the tap flash, the count pill (drawn over the card's top-right corner), and a tap-only hit
-// area calling tugQueueMob (no hold, no hover; "none" while there is no dock model).
+// A mob card, built once per attackerDefs entry: the card tile, the attacker sheet's frame 0, the role word, the tap
+// flash, the cost badge (a coin with the number centred on it, over the card's top-left corner), the count pill (over
+// the top-right corner), and a tap-only hit area calling tugQueueMob (no hold, no hover; "none" while there is no
+// dock model).
 function tugPxBuildMob(group, id, i) {
   const M = TUG_PX_MOB;
   const P = M.pill;
@@ -1366,10 +1382,11 @@ function tugPxBuildMob(group, id, i) {
   if (sprite.mask) {
     tugPxNoEvents(sprite.mask);
   }
-  const coin = tugPxNoEvents(tugPxCoin(new PIXI.Graphics(), left + M.coinDx, M.costCy, M.coinD, M.coinRing));
-  const cost = tugPxNoEvents(jonText("", { font: "head", size: M.costSize, fill: ink }));
-  cost.anchor.set(0, 0.5);
-  cost.position.set(left + M.costDx, M.costCy);
+  const B = M.badge;
+  const coin = tugPxNoEvents(tugPxCoin(new PIXI.Graphics(), left + B.dx, B.cy, B.d, B.ring));
+  const cost = tugPxNoEvents(jonText("", { font: "head", size: B.size, fill: ink }));
+  cost.anchor.set(0.5, 0.5);
+  cost.position.set(left + B.dx, B.cy);
   const role = tugPxNoEvents(jonText("", { font: "head", size: M.roleSize, fill: ink }));
   role.anchor.set(0.5, 1);
   role.position.set(cx, M.roleBottom);
@@ -1384,7 +1401,7 @@ function tugPxBuildMob(group, id, i) {
   pillText.position.set(0, P.top + P.height / 2);
   pill.addChild(pillG, pillText);
   pill.visible = false;
-  box.addChild(coin, cost, role, flash, pill);
+  box.addChild(role, flash, coin, cost, pill);
   const rec = {
     id, box, tile, sprite, coin, cost, role, flash, pill, pillG, pillText, pillKey: "", hit: null, left,
     poor: null, blocked: null, count: null, active: null, flashTimeouts: null
@@ -1421,7 +1438,8 @@ function tugPxDrawMobPill(card) {
 }
 
 // One mob card from its model (null: the card keeps its last look). Writes only on change: the cost text, its colour
-// (poor), the sprite alpha and the role colour (blocked), the pill. The hit area is live only while there is a dock.
+// (poor), their fit to the badge and the card (when the word changes), the sprite alpha and the role colour (blocked),
+// the pill. The hit area is live only while there is a dock.
 function tugPxSyncMob(card, m, hasDock) {
   const active = hasDock;
   if (active !== card.active) {
@@ -1431,8 +1449,16 @@ function tugPxSyncMob(card, m, hasDock) {
   if (!m) {
     return;
   }
-  tugPxSetText(card.cost, tugPxStr(m.cost));
-  tugPxSetText(card.role, tugPxStr(m.role));
+  const cost = tugPxStr(m.cost);
+  if (card.cost.text !== cost) {
+    card.cost.text = cost;
+    tugPxFitWidth(card.cost, TUG_PX_MOB.badge.d - 2 * TUG_PX_MOB.badge.pad);
+  }
+  const role = tugPxStr(m.role);
+  if (card.role.text !== role) {
+    card.role.text = role;
+    tugPxFitWidth(card.role, TUG_PX_MOB.width - 2 * TUG_PX_MOB.rolePad);
+  }
   const poor = !!m.poor;
   if (poor !== card.poor) {
     card.poor = poor;

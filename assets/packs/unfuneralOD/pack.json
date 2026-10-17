@@ -15,7 +15,8 @@
         "violet",
         "green"
       ]
-    }
+    },
+    "hidden": true
   },
   "chrome": {
     "mode": "layers",

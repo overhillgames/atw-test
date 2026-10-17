@@ -13,13 +13,14 @@
 // --screenshots stills (drawBoard only at a few moments) must show.
 
 // -------------------------------------------------------------------------------------------------
-// Motion words (02-art-packs.js declares them per pack)
+// Motion words (02-art-packs.js declares them per pack; applyArtPack fills unitMotionSets per side, so an online
+// opponent's creeps move the way their own pack says)
 // -------------------------------------------------------------------------------------------------
 
 const DEFAULT_UNIT_MOTION = { imp: "walk", runner: "walk", brute: "walk", wisp: "float", tank: "roll" };
 
-function getUnitMotion(defId) {
-  return activeArtPack?.motion?.[defId] || DEFAULT_UNIT_MOTION[defId] || "walk";
+function getUnitMotion(defId, side) {
+  return unitMotionSets?.[side]?.[defId] || activeArtPack?.motion?.[defId] || DEFAULT_UNIT_MOTION[defId] || "walk";
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -500,7 +501,7 @@ function juiceCreateUnitView(unit, clock) {
     fields,
     rw,
     rh,
-    motion: getUnitMotion(unit.defId),
+    motion: getUnitMotion(unit.defId, side),
     flip: unit.owner === "ai" && (unit.defId === "wisp" || unit.defId === "tank"),
     container,
     shadow,

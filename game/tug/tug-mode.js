@@ -15,8 +15,9 @@
 // buildCardDetailLines, saveMatchStateNow, quitMatchNow); deleting game/tug/, its six script tags, the Tug Online button
 // and those lines removes tug.
 //
-// Online (tugStartMatch with options.net = { roomId, role: "host" | "guest", seed, startAt, opponentName }, from
-// tug-net.js): a delayed-input lockstep match against another client. tug-net.js owns everything Firebase (rooms and
+// Online (tugStartMatch with options.net = { roomId, role: "host" | "guest", seed, startAt, opponentName, opponentPack }, from
+// tug-net.js; opponentPack: the opponent's pack id or null, startNewMatch draws the ai side with it): a delayed-input
+// lockstep match against another client. tug-net.js owns everything Firebase (rooms and
 // matchmaking, the input log, fronts, hashes, forfeit, disconnect, the server clock); this file owns the sim and what
 // the player sees. Both clients create the match from net.seed and step it the same way: no bot, no dt accumulation.
 // tugUpdate steps tick by tick up to tugNetTargetTick() (the server clock against startAt; negative before it, when
@@ -63,13 +64,13 @@
 //               tappable true
 //     building  name "Turret N", line "building", ready false, colourId as built, tappable true
 //     rubble    name "Turret N", line "rubble · {ceil s}s", ready false, colourId null, tappable false
-//     empty     name "Slot N", line "tap the lane to build", ready false, colourId null, tappable false
+//     empty     name "Slot N", line "tap to build · {turret price} gold", ready false, colourId null, tappable true
 //   frame: { kind: "trait" | "open" | "heal", trait (kind "trait", else null), name (the role word: the trait's name,
 //     "Open", "Heal"), rank and cap (kind "trait", else null), lit, action (a trait id or "heal" on a lit frame, else
 //     null), dim (the turret has a level ready and this frame is not lit), hint (lit: the TUG_MODE_HINTS word of its
 //     trait or "heal", else ""), sub (heal: "{hp}/{maxHp} hp", else null) }
 //   mob: { id, cost, role, count, poor, blocked } one per attackerDefs entry, in that order: cost
-//     match.tug.costs.mob[id], role UNIT_CARD_COPY[id].role (SWARM, FAST, TOUGH, ELITE, HEAVY), count
+//     match.tug.costs.mob[id], role TUG_MODE_ROLES[id] (GRUNT, RUNNER, ANTI-SIEGE, SNIPER, SIEGE), count
 //     queue.counts[id] || 0, poor (gold < cost), blocked (poor, or the queue is full, or the match is over)
 //   queue: { counts: { defId: n } (snap.player.build, head included), list: [{ defId, frac, training }] (snap.player.build
 //     in order, head first; training is true for every entry while queue.parallel, else for the head only; frac is a
@@ -129,6 +130,8 @@ const TUG_MODE_PLAIN_FRAMES = {
   heal: { name: "Heal", action: "heal" }
 };
 const TUG_MODE_REFUSALS = { "not enough gold": "Not enough gold.", "queue full": "Queue full.", "under construction": "Under construction." };
+// Tug's own mob card words (2026-10-16): the card word is the only name a player sees in tug. The old match keeps its own.
+const TUG_MODE_ROLES = { imp: "GRUNT", runner: "RUNNER", brute: "ANTI-SIEGE", wisp: "SNIPER", tank: "SIEGE" };
 
 // Bookkeeping (never on state or tugState)
 let tugModeChrome = null;      // the Pixi nodes tug hid, with their classic values (tugModeApplyChrome)
@@ -741,19 +744,10 @@ function tugPickOffer(kind) {
   }
 }
 
-// A turret tab tap (tug-pixi.js, units mode; slot is my sim slot, the view mirrors y only): a built or building turret
-// becomes the selection (the dock shows its traits); an empty or rubble slot does nothing (building stays a lane tap).
+// A turret tab tap (tug-pixi.js, units mode; slot is my sim slot, the view mirrors y only): does what a tap on that
+// slot's diamond does (tugSlotTap): select a built or building turret, build on an empty slot, refuse rubble.
 function tugTabTap(slot) {
-  if (!tugModeCanAct()) {
-    return;
-  }
-  const mine = tugState.match[tugState.mySide];
-  if (!Number.isInteger(slot) || slot < 0 || slot >= mine.towers.length) {
-    return;
-  }
-  if (mine.towers[slot]) {
-    tugState.selected = { side: "player", slot };
-  }
+  tugSlotTap(slot);
 }
 
 // A frame tap (tug-pixi.js; i is 0-3, indexing tugState.dock.frames): a dim frame does nothing, a lit one takes its
@@ -901,10 +895,11 @@ function tugModeTowerDock(snap, selected, queue, mobs) {
 
 // The turret tabs of units mode: one per slot of my side (the view snapshot's player side: towers, slotStates, rubble).
 // built / building: "Turret N" with its level and hp (or "building"), the turret's colour, tappable; rubble: the seconds
-// left; empty: a prompt. Only built and building tabs are tappable (tugTabTap).
+// left; empty: a build prompt with the turret price. Built, building and empty tabs are tappable, rubble is not (tugTabTap).
 function tugModeTabs(snap) {
   const P = snap.player;
   const tabs = [];
+  const price = ProtoSim.tugTowerPrice(tugState.match, tugState.mySide);
   for (let slot = 0; slot < TUG_MODE_SLOTS; slot += 1) {
     const t = Array.isArray(P.towers) ? P.towers[slot] || null : null;
     const raw = Array.isArray(P.slotStates) ? P.slotStates[slot] : null; // "empty" | "rubble" | "building" | "tower"
@@ -926,7 +921,10 @@ function tugModeTabs(snap) {
       const left = Array.isArray(P.rubble) ? Number(P.rubble[slot]) || 0 : 0;
       tabs.push({ slot, state: "rubble", name, line: `rubble · ${Math.ceil(left - 1e-9)}s`, ready: false, colourId: null, tappable: false });
     } else {
-      tabs.push({ slot, state: "empty", name, line: "tap the lane to build", ready: false, colourId: null, tappable: false });
+      tabs.push({
+        slot, state: "empty", name, line: price === null ? "tap to build" : `tap to build · ${tugModeNum(price)} gold`,
+        ready: false, colourId: null, tappable: true
+      });
     }
   }
   return tabs;
@@ -940,12 +938,11 @@ function tugModeDockMobs(snap, queue) {
   const full = snap.player.build.length >= Math.floor(Number(match.tug.queue.max));
   return attackerDefs.map((def) => {
     const cost = match.tug.costs.mob[def.id];
-    const copy = UNIT_CARD_COPY[def.id];
     const poor = gold < cost;
     return {
       id: def.id,
       cost,
-      role: copy ? copy.role : "",
+      role: TUG_MODE_ROLES[def.id] || "",
       count: queue.counts[def.id] || 0,
       poor,
       blocked: poor || full || tugState.over

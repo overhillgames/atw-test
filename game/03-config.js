@@ -284,6 +284,8 @@ let attackerSpriteConfig = activeArtPack.attackerSprites;
 let attackerSpriteConfigSets = { player: activeArtPack.attackerSprites, ai: activeArtPack.attackerSprites };
 let attackerSprites = {};
 let attackerSpriteSets = { player: {}, ai: {} };
+let opponentArtPackId = null; // online: the opponent's pick, drawn on the ai side (setOpponentArtPack); null = the active pack's own ai side
+let unitMotionSets = { player: {}, ai: {} }; // each side's motion words (applyArtPack), read by getUnitMotion
 let creepKillEffectConfig = activeArtPack.creepKillEffect || null;
 let creepKillEffectSprite = null;
 const battlefieldBackgroundImage = new Image();

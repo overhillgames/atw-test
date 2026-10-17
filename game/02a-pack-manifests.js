@@ -1600,7 +1600,7 @@ const PACK_MANIFESTS = {
   },
   "jonCarling": {
     "id": "jonCarling",
-    "name": "Jon Carling",
+    "name": "Jon Carling Sci-Fi",
     "picker": {
       "artist": "Jon Carling",
       "icon": "assets/ui/artist-icons/joncarling.png",
@@ -2167,7 +2167,8 @@ const PACK_MANIFESTS = {
           "violet",
           "green"
         ]
-      }
+      },
+      "hidden": true
     },
     "chrome": {
       "mode": "layers",
@@ -2530,7 +2531,8 @@ const PACK_MANIFESTS = {
           "violet",
           "yellow"
         ]
-      }
+      },
+      "hidden": true
     },
     "chrome": {
       "mode": "layers",

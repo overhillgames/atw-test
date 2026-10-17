@@ -15,7 +15,7 @@ function setDifficulty(difficulty) {
 function setArtPack(artPackId) {
   const normalizedArtPackId = normalizeArtPackId(artPackId);
   const option = getArtPackOption(normalizedArtPackId);
-  if (!option.unlocked || !ART_PACKS[normalizedArtPackId]) {
+  if (!option.unlocked || !isPickableArtPack(normalizedArtPackId)) {
     return;
   }
   gameOptions.artPack = normalizedArtPackId;

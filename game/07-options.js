@@ -28,7 +28,7 @@ function renderArtPackOptions() {
     return;
   }
 
-  artPackGridEl.innerHTML = ART_PACK_OPTIONS.map((option) => {
+  artPackGridEl.innerHTML = ART_PACK_OPTIONS.filter((option) => option.hidden !== true).map((option) => {
     const pack = getArtPackForPreview(option);
     const fallbackPack = ART_PACKS[DEFAULT_OPTIONS.artPack];
     const preview = option.preview;
@@ -184,7 +184,7 @@ function loadOptions() {
     if (!AI_DIFFICULTY_SETTINGS[gameOptions.difficulty]) {
       gameOptions.difficulty = DEFAULT_OPTIONS.difficulty;
     }
-    if (!ART_PACKS[gameOptions.artPack]) {
+    if (!isPickableArtPack(gameOptions.artPack)) {
       gameOptions.artPack = DEFAULT_OPTIONS.artPack;
     }
     if (gameOptions.musicPack === "composer1") {

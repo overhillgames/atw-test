@@ -47,6 +47,12 @@ function getOwnerVisualSide(owner) {
   return owner === "ai" ? "ai" : "player";
 }
 
+// A pack the player may pick: known to ART_PACKS and not hidden (pack.json picker.hidden; hidden packs stay loadable
+// for the old match and the dev tools, but never show on the Art screen, in saved options or as an online opponent).
+function isPickableArtPack(packId) {
+  return typeof packId === "string" && !!ART_PACKS[packId] && ART_PACKS[packId].picker?.hidden !== true;
+}
+
 function getArtPackSideAssets(pack, side, key) {
   const fallbackPack = ART_PACKS[DEFAULT_OPTIONS.artPack] || {};
   return pack.sideAssets?.[side]?.[key] || pack[key] || fallbackPack[key] || {};
@@ -198,9 +204,13 @@ function applyArtPack(artPackId, rerender = false) {
   PACK_HUD = activeArtPack.hud;
   PACK_LAYOUT = activeArtPack.layout || {};
   applyPackDom(activeArtPack);
+  // The ai side's towers, creeps and motion: an online opponent's own pick (its player side), else the active pack's ai
+  // side. Everything else (chrome, UI, fonts, colours, fx, battlefield, kill effect) stays the active pack's.
+  const aiPack = opponentArtPackId && isPickableArtPack(opponentArtPackId) ? ART_PACKS[opponentArtPackId] : null;
+  const aiSideAssets = (key) => aiPack ? getArtPackSideAssets(aiPack, "player", key) : getArtPackSideAssets(activeArtPack, "ai", key);
   const towerEntrySets = {
     player: getArtPackSideAssets(activeArtPack, "player", "towers"),
-    ai: getArtPackSideAssets(activeArtPack, "ai", "towers")
+    ai: aiSideAssets("towers")
   };
   towerSpritePathSets = { player: {}, ai: {} };
   towerRenderFieldSets = { player: {}, ai: {} };
@@ -213,19 +223,20 @@ function applyArtPack(artPackId, rerender = false) {
   towerSpritePaths = towerSpritePathSets.player;
   towerFireSheetConfigSets = {
     player: getArtPackSideAssets(activeArtPack, "player", "towerFireSheets"),
-    ai: getArtPackSideAssets(activeArtPack, "ai", "towerFireSheets")
+    ai: aiSideAssets("towerFireSheets")
   };
   towerFireSheetConfig = towerFireSheetConfigSets.player;
   attackerIconPathSets = {
     player: getArtPackSideAssets(activeArtPack, "player", "attackerIcons"),
-    ai: getArtPackSideAssets(activeArtPack, "ai", "attackerIcons")
+    ai: aiSideAssets("attackerIcons")
   };
   attackerIconPaths = attackerIconPathSets.player;
   attackerSpriteConfigSets = {
     player: getArtPackSideAssets(activeArtPack, "player", "attackerSprites"),
-    ai: getArtPackSideAssets(activeArtPack, "ai", "attackerSprites")
+    ai: aiSideAssets("attackerSprites")
   };
   attackerSpriteConfig = attackerSpriteConfigSets.player;
+  unitMotionSets = { player: activeArtPack.motion || {}, ai: (aiPack || activeArtPack).motion || {} };
   creepKillEffectConfig = activeArtPack.creepKillEffect || null;
   attackerSprites = {};
   attackerSpriteSets = { player: {}, ai: {} };
@@ -258,4 +269,17 @@ function applyArtPack(artPackId, rerender = false) {
     }
     refreshAllUI();
   }
+}
+
+// Declares whose pack the ai side wears: an online opponent's pick, or null for the active pack's own ai side.
+// startNewMatch calls it at every match start (options.net.opponentPack, else null) and tugNetGo (tug-net.js) calls it
+// at the start of its "Starting…" beat so the pictures load early. Rebuilds (applyArtPack(…, true)) only on a change.
+function setOpponentArtPack(packId) {
+  const next = isPickableArtPack(packId) ? packId : null;
+  if (next === opponentArtPackId) {
+    return false;
+  }
+  opponentArtPackId = next;
+  applyArtPack(activeArtPackId, true);
+  return true;
 }

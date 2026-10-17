@@ -13,7 +13,8 @@
 // The room, under the shared rooms/ root. Classic lists rooms with status "waiting" only, so no classic client, old or
 // new, can list or join a tug room; the rules are classic's (rooms/$roomId writable by any signed-in user).
 //   rooms/<roomId> = { createdAt: server ms, status: "tug-waiting" | "tug-active" | "tug-finished",
-//     host: uid, hostTabId, hostName, guest: null | uid, guestTabId, guestName, mode: "tug", build: TUG_NET_BUILD,
+//     host: uid, hostTabId, hostName, hostPack, guest: null | uid, guestTabId, guestName, guestPack, mode: "tug",
+//     build: TUG_NET_BUILD, (hostPack, guestPack: the player's Art screen pick, a pack id; may be missing)
 //     seed: uint32 (the host's),
 //     tug: { startAt: null | server ms (the host's server clock + TUG_NET_START_DELAY_MS, once the guest is in),
 //       in: { host: { "000001": { t, k, a }, ... }, guest: { ... } } (the input log; keys: seq zero-padded to 6),
@@ -31,7 +32,7 @@
 // waits) and re-scan every TUG_NET_POLL_MS, yielding to an older room (mine is removed first). My room turning
 // tug-active with a guest makes me the host: the onDisconnect remove is cancelled and I write tug/startAt. Both watch
 // the room for a numeric startAt (the guest also checks the room is still its), then the card says "Starting…" and
-// startNewMatch({ mode: "tug", net: { roomId, role, seed, startAt, opponentName } }) opens the match. A room that
+// startNewMatch({ mode: "tug", net: { roomId, role, seed, startAt, opponentName, opponentPack } }) opens the match. A room that
 // vanishes or is given up before the start sends the other side back to searching. Cancel removes my waiting room,
 // or marks a claimed one finished with my left. The display name is "Player-" + my uid's first four characters (the
 // lobby's name is private to it).
@@ -73,7 +74,7 @@
 
 // ------------------------------------------------------------------------------------- constants and state
 
-const TUG_NET_BUILD = "2026-10-16-a";        // bump whenever sim.js or rules.js changes: only equal builds meet
+const TUG_NET_BUILD = "2026-10-16-b";        // bump whenever sim.js or rules.js changes: only equal builds meet
 const TUG_NET_DELAY_TICKS = 18;              // a tap applies this many ticks later on both clients (0.6 s)
 const TUG_NET_HEARTBEAT_MS = 100;            // my front is published this often (only when it moved)
 const TUG_NET_STALE_MS = 90000;              // a waiting room older than this is skipped (classic's STALE_QUEUE_MS)
@@ -96,6 +97,11 @@ let tugNetOffsetRef = null;    // that listener's ref once attached (it stays fo
 let tugNetCancelBtnEl = null;  // the #matchmaking-cancel-btn carrying this file's listener
 
 // ------------------------------------------------------------------------------------------------- helpers
+
+// My Art screen pick (a pack id), sent in the room so the opponent can draw my army; null when there is none.
+function tugNetMyPack() {
+  return typeof gameOptions === "object" && gameOptions && typeof gameOptions.artPack === "string" ? gameOptions.artPack : null;
+}
 
 // The Firebase server clock in ms: my clock plus the latest .info/serverTimeOffset (0 until it arrives).
 function tugNetServerNow() {
@@ -416,7 +422,8 @@ async function tugNetClaim(search, roomId) {
     return false;
   }
   try {
-    await ref.update({ status: "tug-active", guest: search.uid, guestName: search.name, guestTabId: search.tabId });
+    await ref.update({ status: "tug-active", guest: search.uid, guestName: search.name, guestTabId: search.tabId,
+      guestPack: tugNetMyPack() });
   } catch (err) {
     console.warn(`[tug-net] claim on ${roomId} failed:`, err && err.message);
     return false;
@@ -465,6 +472,7 @@ async function tugNetHost(search) {
       host: search.uid,
       hostTabId: search.tabId,
       hostName: search.name,
+      hostPack: tugNetMyPack(),
       guest: null,
       guestTabId: null,
       guestName: null,
@@ -573,7 +581,8 @@ function tugNetGo(search, room) {
     role,
     seed: Number(room.seed),
     startAt: Number(room.tug.startAt),
-    opponentName: (role === "host" ? room.guestName : room.hostName) || "Opponent"
+    opponentName: (role === "host" ? room.guestName : room.hostName) || "Opponent",
+    opponentPack: (role === "host" ? room.guestPack : room.hostPack) || null
   };
   search.phase = "starting";
   if (search.pollTimer) {
@@ -583,6 +592,10 @@ function tugNetGo(search, room) {
   tugNetOffAll(search.offs);
   tugNetOverlayText("Rival found", "Starting…", true);
   console.log("[tug-net] match found", net);
+  // the opponent's pictures load during the beat; startNewMatch's own call is then a no-op
+  if (typeof setOpponentArtPack === "function") {
+    setOpponentArtPack(net.opponentPack);
+  }
   search.goTimer = setTimeout(() => {
     search.goTimer = null;
     if (tugNetSearch !== search) {
