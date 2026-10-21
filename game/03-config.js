@@ -23,33 +23,35 @@ const UNIT_CARD_COPY = {
   tank: { role: "HEAVY", line: "Slowest and toughest; shoots enemy attackers", effect: "Shoots the nearest enemy attacker: 1 damage every 1.1 s at short range." }
 };
 const DEFAULT_OPTIONS = {
-  difficulty: "yellow",
+  difficulty: "red", // 2026-10-21: the tug ladder's Normal.
   artPack: "jonCarlingLight",
   musicPack: "christopherJosephUehlein",
   musicVolume: 40,
   sfxVolume: 85
 };
 const GAUNTLET_STORAGE_KEY = ATW_STORAGE_PREFIX + "lineTowerWarsGauntlet";
-const GAUNTLET_SEASON_ID = "gauntlet-2026-06-ai-strategy";
+// A new id resets everyone's Gauntlet progress once (2026-10-21: the old progress was earned on the old match).
+const GAUNTLET_SEASON_ID = "gauntlet-2026-10-tug";
 const GAUNTLET_MAP_WIDTH = 630;
 const GAUNTLET_MAP_HEIGHT = 1520;
+// Tug plays each stage at its skill (bot.plays.skill); strategy is the classic AI's.
 const GAUNTLET_STAGES = [
-  { id: "marker-01", difficulty: "purple", strategy: "rush", x: 311.5, y: 1415.5 },
-  { id: "marker-02", difficulty: "purple", strategy: "fortress", x: 455.5, y: 1319.5 },
-  { id: "marker-03", difficulty: "yellow", strategy: "counter", x: 215.5, y: 1271.5 },
-  { id: "marker-04", difficulty: "yellow", strategy: "rush", x: 167.5, y: 1175.5 },
-  { id: "marker-05", difficulty: "yellow", strategy: "fortress", x: 311.5, y: 1127.5 },
-  { id: "marker-06", difficulty: "red", strategy: "counter", x: 455.5, y: 1031.5 },
-  { id: "marker-07", difficulty: "red", strategy: "rush", x: 359.5, y: 983.5 },
-  { id: "marker-08", difficulty: "red", strategy: "fortress", x: 263.5, y: 887.5 },
-  { id: "marker-09", difficulty: "green", strategy: "counter", x: 167.5, y: 791.5 },
-  { id: "marker-10", difficulty: "green", strategy: "rush", x: 359.5, y: 695.5 },
-  { id: "marker-11", difficulty: "green", strategy: "fortress", x: 455.5, y: 551.5 },
-  { id: "marker-12", difficulty: "green", strategy: "counter", x: 407.5, y: 455.5 },
-  { id: "marker-13", difficulty: "blue", strategy: "rush", x: 215.5, y: 407.5 },
-  { id: "marker-14", difficulty: "blue", strategy: "fortress", x: 311.5, y: 311.5 },
-  { id: "marker-15", difficulty: "blue", strategy: "counter", x: 311.5, y: 215.5 },
-  { id: "marker-16", difficulty: "blue", strategy: "boss", x: 311.5, y: 71.5 }
+  { id: "marker-01", difficulty: "purple", strategy: "rush", skill: 0.20, x: 311.5, y: 1415.5 },
+  { id: "marker-02", difficulty: "purple", strategy: "fortress", skill: 0.26, x: 455.5, y: 1319.5 },
+  { id: "marker-03", difficulty: "yellow", strategy: "counter", skill: 0.34, x: 215.5, y: 1271.5 },
+  { id: "marker-04", difficulty: "yellow", strategy: "rush", skill: 0.40, x: 167.5, y: 1175.5 },
+  { id: "marker-05", difficulty: "yellow", strategy: "fortress", skill: 0.46, x: 311.5, y: 1127.5 },
+  { id: "marker-06", difficulty: "red", strategy: "counter", skill: 0.54, x: 455.5, y: 1031.5 },
+  { id: "marker-07", difficulty: "red", strategy: "rush", skill: 0.60, x: 359.5, y: 983.5 },
+  { id: "marker-08", difficulty: "red", strategy: "fortress", skill: 0.66, x: 263.5, y: 887.5 },
+  { id: "marker-09", difficulty: "green", strategy: "counter", skill: 0.72, x: 167.5, y: 791.5 },
+  { id: "marker-10", difficulty: "green", strategy: "rush", skill: 0.76, x: 359.5, y: 695.5 },
+  { id: "marker-11", difficulty: "green", strategy: "fortress", skill: 0.80, x: 455.5, y: 551.5 },
+  { id: "marker-12", difficulty: "green", strategy: "counter", skill: 0.84, x: 407.5, y: 455.5 },
+  { id: "marker-13", difficulty: "blue", strategy: "rush", skill: 0.88, x: 215.5, y: 407.5 },
+  { id: "marker-14", difficulty: "blue", strategy: "fortress", skill: 0.92, x: 311.5, y: 311.5 },
+  { id: "marker-15", difficulty: "blue", strategy: "counter", skill: 0.96, x: 311.5, y: 215.5 },
+  { id: "marker-16", difficulty: "blue", strategy: "boss", skill: 1.00, x: 311.5, y: 71.5 }
 ];
 const ART_PACK_OPTIONS = [
   // The unlocked rows come from the pack manifests (www/assets/packs/<id>/pack.json: name + picker).
@@ -109,6 +111,8 @@ const MUSIC_PACK_OPTIONS = [
 const AI_DIFFICULTY_SETTINGS = {
   purple: {
     label: "Purple",
+    // tugSkill is the only field tug reads (bot.plays.skill, 0..1); the rest of each entry is the classic AI's.
+    tugSkill: 0.3,
     level: "Easy",
     summary: "Forgiving AI. It over-saves, sends slower waves, and gives up the strongest tower priorities.",
     manaBonusPerRound: 0,
@@ -128,6 +132,7 @@ const AI_DIFFICULTY_SETTINGS = {
   },
   yellow: {
     label: "Yellow",
+    tugSkill: 0.45,
     level: "Medium",
     summary: "Balanced AI. It considers every tower and creep, including tower upgrades.",
     manaBonusPerRound: 0,
@@ -147,6 +152,7 @@ const AI_DIFFICULTY_SETTINGS = {
   },
   red: {
     label: "Red",
+    tugSkill: 0.6,
     level: "Hard",
     summary: "Aggressive AI. It leans on rush and imp pressure, with green support from the simulation's upper middle.",
     manaBonusPerRound: 3,
@@ -166,6 +172,7 @@ const AI_DIFFICULTY_SETTINGS = {
   },
   green: {
     label: "Green",
+    tugSkill: 0.8,
     level: "Very Hard",
     summary: "Sharp AI. It combines the strongest tower samples with steady rush pressure.",
     manaBonusPerRound: 4,
@@ -185,6 +192,7 @@ const AI_DIFFICULTY_SETTINGS = {
   },
   blue: {
     label: "Blue",
+    tugSkill: 0.9,
     level: "Ludicrous",
     summary: "No mercy. It borrows from the top simulated tower-heavy strategies and rush pressure.",
     manaBonusPerRound: 5,

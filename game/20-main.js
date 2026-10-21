@@ -111,6 +111,14 @@ gauntletBackBtnEl.addEventListener("click", () => {
   setScreen("menu");
 });
 
+// The markers are redrawn by innerHTML, so one listener on their layer catches every tap.
+// Locked markers are refused inside selectGauntletStage.
+gauntletMarkerLayerEl?.addEventListener("click", (event) => {
+  const marker = event.target.closest(".gauntlet-marker");
+  if (!marker) return;
+  selectGauntletStage(Number(marker.dataset.stage));
+});
+
 gauntletStartBtnEl.addEventListener("click", () => {
   startGauntletChallenge();
 });

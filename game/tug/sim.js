@@ -418,7 +418,7 @@ const ProtoSim = (function () {
         gateDamage: { player: 0, ai: 0 }, // gate damage that side dealt
         goldEarned: { player: 0, ai: 0 }, // gold that side earned (kills and drip; a sellRefund refund is not earned)
         goldSpent: { player: 0, ai: 0 },  // gold that side paid for mobs and towers (a cancelled mob's refund comes off it)
-        goldBySource: { player: { mob: 0, turret: 0, gun: 0, gate: 0, drip: 0, other: 0 }, ai: { mob: 0, turret: 0, gun: 0, gate: 0, drip: 0, other: 0 } }, // goldEarned split by who earned it: that side's mobs, turrets, gate gun, gate damage (gold.perGateDamage), the drip (other = a kill with no known source; stays 0)
+        goldBySource: { player: { mob: 0, turret: 0, gun: 0, gate: 0, drip: 0, hold: 0, other: 0 }, ai: { mob: 0, turret: 0, gun: 0, gate: 0, drip: 0, hold: 0, other: 0 } }, // goldEarned split by who earned it: that side's mobs, turrets, gate gun, gate damage (gold.perGateDamage), the drip, the hold pay on drip ticks (gold.hold, mobs in the enemy half) (other = a kill with no known source; stays 0)
         mobDamage: { player: perMob(), ai: perMob() }, // hp that side's mobs of each id took off enemy mobs, turrets and the gate (overkill not counted)
         mobKillValue: { player: perMob(), ai: perMob() }, // gold the kills of that side's mobs of each id paid: enemy mobs and turrets; turret and gun kills are not a mob's
         mobGateDamage: { player: perMob(), ai: perMob() }, // gate hp that side's mobs of each id took off the enemy gate
@@ -1791,6 +1791,15 @@ const ProtoSim = (function () {
     return unit.hp > 0 && !unit.isDefeated;
   }
 
+  // "Scout eyes" (gold.hold, 2026-10-21): true when unit stands past the lane midline, the average of the two gate
+  // lines (the bot's own idiom). A player mob is in the enemy half above the midline (y < mid), an ai mob below it
+  // (y > mid). Does not check tugAlive; the caller does. Exported for the HUD's hold chip.
+  function tugInEnemyHalf(match, unit) {
+    const gateY = match.tug.lane.gateY;
+    const mid = (Number(gateY.player) + Number(gateY.ai)) / 2;
+    return unit.owner === "player" ? unit.y < mid : unit.y > mid;
+  }
+
   // A side's mobs walk up the frame (player) or down (ai).
   function tugDir(side) {
     return side === "player" ? -1 : 1;
@@ -2744,9 +2753,18 @@ const ProtoSim = (function () {
 
   // gold.dripSeconds > 0: one gold to each side every that many seconds of match time (the timer runs from match start,
   // counted as earned); 0 or less = no drip.
+  // Hold pay ("scout eyes", gold.hold, 2026-10-21, Baz): on each drip tick each side also gets
+  // min(cap, floor(perMob x its living mobs in the enemy half, tugInEnemyHalf)), booked to goldEarned and
+  // goldBySource.hold, with one "gold" event on match.hits at that side's forward-most living mob. gold.hold missing,
+  // or perMob / cap not > 0 = no hold pay. No rng.
   function stepTugDrip(match, dt) {
     const period = Number(match.tug.gold.dripSeconds);
     if (!(Number.isFinite(period) && period > 0)) return;
+    const hold = match.tug.gold.hold;
+    const perMobRaw = hold ? Number(hold.perMob) : 0;
+    const capRaw = hold ? Number(hold.cap) : 0;
+    const perMob = Number.isFinite(perMobRaw) && perMobRaw > 0 ? perMobRaw : 0;
+    const cap = Number.isFinite(capRaw) && capRaw > 0 ? capRaw : 0;
     match.dripTimer += dt;
     while (match.dripTimer >= period - 1e-9) {
       match.dripTimer -= period;
@@ -2754,6 +2772,22 @@ const ProtoSim = (function () {
         match[side].gold += 1;
         match.stats.goldEarned[side] += 1;
         match.stats.goldBySource[side].drip += 1;
+        if (perMob > 0 && cap > 0) {
+          let n = 0;
+          let front = null; // the forward-most in-half mob; when any mob is in the half, the side's front mob is too
+          for (const unit of match[side].units) {
+            if (!tugAlive(unit) || !tugInEnemyHalf(match, unit)) continue;
+            n += 1;
+            if (front === null || (side === "player" ? unit.y < front.y : unit.y > front.y)) front = unit;
+          }
+          const pay = Math.min(cap, Math.floor(perMob * n));
+          if (pay > 0) {
+            match[side].gold += pay;
+            match.stats.goldEarned[side] += pay;
+            match.stats.goldBySource[side].hold += pay;
+            match.hits.push({ x: front.x, y: front.y, amount: pay, side, age: 0, kind: "gold" });
+          }
+        }
       }
     }
   }
@@ -3389,6 +3423,7 @@ const ProtoSim = (function () {
     tugTowerPrice,
     tugApplyTraits,
     tugTraitCap,
+    tugInEnemyHalf,
     TUG_TRAIT_KINDS,
     buildTugTable,
     mulberry32,

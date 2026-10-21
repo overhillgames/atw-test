@@ -190,6 +190,7 @@ let gauntletProgress = {
   currentWins: 0
 };
 let gauntletTravelFromStage = null;
+let gauntletSelectedStage = null; // Gauntlet map: the stage the orb sits on and Engage launches; null = the frontier (unlockedStage)
 let pendingGauntletReturn = null;
 let activeDragPayload = "";
 let selectedTowerId = null;

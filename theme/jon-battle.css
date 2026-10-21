@@ -520,6 +520,7 @@ body.mode-tug #game-screen #pause-menu-btn,
 body.mode-tug #game-screen #quit-confirm-btn,
 body.mode-tug #game-screen #quit-cancel-btn,
 body.mode-tug #game-screen #match-play-again-btn,
+body.mode-tug #game-screen #match-continue-btn,
 body.mode-tug #game-screen #match-home-btn {
   position: absolute;
   left: calc(var(--jon-u) * 30);
@@ -550,7 +551,8 @@ body.mode-tug #game-screen #match-home-btn {
 /* buttonMain (the one action): head 24 */
 body.mode-tug #game-screen #pause-resume-btn,
 body.mode-tug #game-screen #quit-cancel-btn,
-body.mode-tug #game-screen #match-play-again-btn {
+body.mode-tug #game-screen #match-play-again-btn,
+body.mode-tug #game-screen #match-continue-btn {
   border-image: var(--pack-btn-main, var(--jon-btn-blue)) 40 fill / calc(var(--jon-u) * 20) stretch;
   font-size: calc(var(--jon-u) * 24);
 }
@@ -569,7 +571,7 @@ body.mode-tug #game-screen #match-home-btn:disabled {
   color: var(--pack-muted, var(--jon-muted));
 }
 
-/* first button at the upper rect, second at the lower: pause 378 / 446 (card offsets 124 / 192), match end 384 / 452 (170 / 238) */
+/* first button at the upper rect, second at the lower: pause 378 / 446 (card offsets 124 / 192), match end 384 / 452 (170 / 238; Play again and Continue share the first, they are never shown together) */
 body.mode-tug #game-screen #pause-resume-btn,
 body.mode-tug #game-screen #quit-confirm-btn {
   top: calc(var(--jon-u) * 124);
@@ -580,7 +582,8 @@ body.mode-tug #game-screen #quit-cancel-btn {
   top: calc(var(--jon-u) * 192);
 }
 
-body.mode-tug #game-screen #match-play-again-btn {
+body.mode-tug #game-screen #match-play-again-btn,
+body.mode-tug #game-screen #match-continue-btn {
   top: calc(var(--jon-u) * 170);
 }
 

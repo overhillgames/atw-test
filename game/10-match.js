@@ -246,13 +246,15 @@ function startNewMatch(options = {}) {
 }
 
 function startGauntletChallenge() {
-  const stageIndex = clamp(gauntletProgress.unlockedStage, 0, GAUNTLET_STAGES.length - 1);
+  const stageIndex = getGauntletSelectedStage();
   const stage = getGauntletStage(stageIndex);
   startNewMatch({
+    mode: "tug", // the Gauntlet plays tug; its stage's skill sets the bot (strategy is classic only)
     gauntlet: true,
     stageIndex,
     difficulty: stage.difficulty,
-    strategy: stage.strategy
+    strategy: stage.strategy,
+    skill: stage.skill
   });
   updateStatus(`Gauntlet battle ${stageIndex + 1}.`);
 }

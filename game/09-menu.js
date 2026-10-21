@@ -59,12 +59,17 @@ function setSfxVolume(volume) {
   refreshMusicOptionsUI();
 }
 
+// Each Difficulty row's sub line, keyed by tier id (2026-10-21: the tug ladder's three tiers). Other ids show their level text.
+const TUG_DIFFICULTY_ROW_LINES = {
+  purple: "Slow to notice you",
+  red: "Plays like today",
+  blue: "Sharp eyes, quick waves"
+};
+
 function refreshOptionsUI() {
   const settings = getAIDifficultySettings();
   if (difficultySummaryEl) {
-    const bonus = settings.manaBonusPerRound;
-    const bonusSentence = bonus > 0 ? ` The AI gets ${bonus} extra mana every round.` : " The AI gets the same mana as you.";
-    difficultySummaryEl.textContent = `${settings.summary}${bonusSentence}`;
+    difficultySummaryEl.textContent = settings.summary;
   }
   renderArtPackOptions();
   renderMusicPackOptions();
@@ -76,8 +81,8 @@ function refreshOptionsUI() {
     option.setAttribute("aria-checked", selected ? "true" : "false");
     const bonusEl = option.querySelector(".difficulty-bonus");
     if (bonusEl) {
-      const optionBonus = AI_DIFFICULTY_SETTINGS[option.dataset.difficulty].manaBonusPerRound;
-      bonusEl.textContent = optionBonus > 0 ? `+${optionBonus} mana a round` : "Even mana";
+      const id = option.dataset.difficulty;
+      bonusEl.textContent = TUG_DIFFICULTY_ROW_LINES[id] || AI_DIFFICULTY_SETTINGS[id].level;
     }
   }
   refreshMusicOptionsUI();
@@ -144,6 +149,11 @@ function setScreen(screen) {
   updateOrientationNotice();
   requestAnimationFrame(resizeBattlefieldFrame);
   if (screen === "gauntlet") {
+    // opening the map from the menu puts the orb back on the frontier; the selection is never saved
+    if (previousScreen === "menu") {
+      gauntletSelectedStage = null;
+      refreshGauntletUI();
+    }
     requestAnimationFrame(() => focusGauntletViewport());
   }
   if (screen !== "game") {

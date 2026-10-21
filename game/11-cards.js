@@ -512,7 +512,8 @@ function refreshMatchEndOverlay() {
   matchResultTitleEl.textContent = summary.title;
   matchResultCopyEl.textContent = summary.copy;
   matchResultEyebrowEl?.classList.toggle("hidden", isGauntletResult);
-  matchResultCopyEl.classList.toggle("hidden", isGauntletResult);
+  // tug's copy is its result line ("Their gate fell"), so it stays on a Gauntlet result; classic hides it there
+  matchResultCopyEl.classList.toggle("hidden", isGauntletResult && state.mode !== "tug");
   matchSummaryGridEl.innerHTML = summary.stats.map((item) => `
     <div class="match-stat">
       <strong>${item.value}</strong>

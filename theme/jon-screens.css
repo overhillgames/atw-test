@@ -316,6 +316,22 @@
   background: var(--jon-paper);
 }
 
+/* tappable: cleared stages and the frontier can be picked on the map */
+.gauntlet-screen .gauntlet-marker.complete,
+.gauntlet-screen .gauntlet-marker.current {
+  cursor: pointer;
+}
+
+/* picked: the fill moves with the orb */
+.gauntlet-screen .gauntlet-marker.selected {
+  background: var(--difficulty-color, var(--jon-blue));
+}
+
+/* the frontier once the orb has left it: paper with its solid ring, like a cleared stage minus the check */
+.gauntlet-screen .gauntlet-marker.current:not(.selected) {
+  background: var(--jon-paper);
+}
+
 /* The bar: the wood recipe at 84 px, full width, no margin. Its layout border is 2 px (the ink and
    the mask keep their 24 px drawing, as on the top bars), so the buttons can sit 12 px from the
    sides: 10 px of padding inside the border. Back and Engage are 52 tall, centred (16 px above and

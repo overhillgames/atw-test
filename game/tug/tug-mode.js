@@ -51,7 +51,8 @@
 // The HUD model (tugState.hud, a new object from every tugUpdateHud that gets past its guard):
 //   { gold: your gold as text ("12", one decimal at most, rounded down), time: m:ss left ("1:44"),
 //     goldPopT0: null | the state.animationClock seconds your gold last changed (never in the match's first half
-//     second); cleared here once HUD_POP_SECONDS have passed or the match is over }
+//     second); cleared here once HUD_POP_SECONDS have passed or the match is over,
+//     hold: the gold the next drip adds for mobs in the enemy half, 0..cap (gold.hold; 0 when it is off) }
 // The dock model v4 (tugState.dock; "The contracts" in .plans/ltw-tug-hud-2a.md):
 //   units mode (nothing selected): { mode: "units", title: "Your turrets: tap one to level it", titleRight: "",
 //     tabs: [tab0, tab1], queue, mobs }
@@ -247,7 +248,18 @@ function tugStartMatch(options = {}) {
   const net = options.net && typeof options.net === "object" ? options.net : null; // tug-net.js's online match, else solo
   // online both clients take the room's seed; solo the harness seeds Math.random, so this stays reproducible there
   const seed = net ? net.seed : Math.floor(Math.random() * 2 ** 32);
-  const rules = Object.assign({}, PROTO_PRESETS.tug, { tugOverrides: { slots: tugModeSlotOverrides() } });
+  // Solo: the bot's skill dial (bot.plays.skill, 0..1): a gauntlet stage's own number wins, else the Difficulty tier's
+  // tugSkill (getAIDifficultySettings reads state.aiDifficultyOverride first). Not a finite number = no override (the
+  // plays bot's explicit numbers, as before). Online: slots only, no bot ever. The style stays TUG_MODE_BOT.
+  let skill = null;
+  if (!net) {
+    const tier = getAIDifficultySettings();
+    skill = Number.isFinite(options.skill) ? options.skill : (tier ? tier.tugSkill : null);
+  }
+  const tugOverrides = Number.isFinite(skill)
+    ? { slots: tugModeSlotOverrides(), bot: { plays: { skill } } }
+    : { slots: tugModeSlotOverrides() };
+  const rules = Object.assign({}, PROTO_PRESETS.tug, { tugOverrides });
   const match = ProtoSim.createMatch(rules, seed);
   tugState = {
     match,
@@ -533,6 +545,34 @@ function tugFinish() {
     ? "You win"
     : (result.winner === tugModeFlipSide(me) ? (tugState.net ? "Opponent wins" : "AI wins") : "Draw");
   state.matchSummary = tugModeSummary(match, result);
+  // A solo Gauntlet battle: classic finishMatch's bookkeeping (12-rounds.js). Record the result, advance on a win (a
+  // draw is not a win), the same three nextGoal sentences, pendingGauntletReturn for the Continue button and the map,
+  // the victory sting, then the run and its overrides are cleared. Online never carries a gauntlet run.
+  if (state.gauntletRun && !tugState.net) {
+    const stageIndex = state.gauntletRun.stageIndex;
+    const won = result.winner === me;
+    // only the frontier stage feeds "Current Gauntlet Win %"; a replay of a cleared stage is practice
+    if (stageIndex === gauntletProgress.unlockedStage) {
+      recordCurrentGauntletResult(won);
+    }
+    const advanced = won && advanceGauntletAfterVictory(stageIndex);
+    state.matchSummary.nextGoal = advanced
+      ? `Gauntlet advanced from battle ${stageIndex + 1} to battle ${gauntletProgress.unlockedStage + 1}.`
+      : won
+        ? `Battle ${stageIndex + 1} is cleared.`
+        : `Gauntlet holds at battle ${stageIndex + 1}.`;
+    pendingGauntletReturn = {
+      fromStageIndex: stageIndex,
+      toStageIndex: gauntletProgress.unlockedStage,
+      advanced
+    };
+    if (won) {
+      playGauntletVictorySfx();
+    }
+    state.gauntletRun = null;
+    state.aiDifficultyOverride = "";
+    state.aiStrategyOverride = "";
+  }
   fadeOutMatchMusic(true);
   clearSavedMatchState();
   tugDeselect();
@@ -639,6 +679,7 @@ function tugEndMatch() {
 
 // The quit confirm's Quit (quitMatchNow, before it goes to the menu): the match ends for good, nothing to resume.
 function tugOnQuit() {
+  state.gauntletRun = null; // a quit Gauntlet battle records no result (neither win nor loss) and leaves the run
   state.hasActiveMatch = false;
   state.gameOver = false;
   tugEndMatch();
@@ -1213,7 +1254,8 @@ function tugModeRestoreDialogs() {
 // Re-applies the chrome setup (classic's HUD stays hidden across a rebuild), then publishes tugState.hud (the header's
 // HUD model): your gold, the time left, and when your gold last changed for tug-pixi.js's pop. The match's first half
 // second is exempt from the pop, as classic's; the pop clears once HUD_POP_SECONDS have passed or the match is over.
-// The pause dialog's line follows the same time text ("1:44 left", tugModeSetPauseLine).
+// The pause dialog's line follows the same time text ("1:44 left", tugModeSetPauseLine). hold mirrors the sim's drip
+// (stepTugDrip): min(cap, floor(perMob x my living mobs in the enemy half)), so the chip shows what the next drip adds.
 function tugUpdateHud() {
   if (!tugState || !pixiState.ready || !pixiState.hudText || !pixiState.hudText.round) {
     return;
@@ -1233,7 +1275,20 @@ function tugUpdateHud() {
     goldPopT0 = null;
   }
   const time = tugModeClockText(remaining);
-  tugState.hud = { gold, time, goldPopT0 };
+  const holdRules = match.tug.gold.hold;
+  const perMobRaw = holdRules ? Number(holdRules.perMob) : 0;
+  const capRaw = holdRules ? Number(holdRules.cap) : 0;
+  const perMob = Number.isFinite(perMobRaw) && perMobRaw > 0 ? perMobRaw : 0;
+  const cap = Number.isFinite(capRaw) && capRaw > 0 ? capRaw : 0;
+  let hold = 0;
+  if (perMob > 0 && cap > 0) {
+    let n = 0;
+    for (const u of match[tugState.mySide].units) {
+      if (u.hp > 0 && !u.isDefeated && ProtoSim.tugInEnemyHalf(match, u)) n += 1;
+    }
+    hold = Math.min(cap, Math.floor(perMob * n));
+  }
+  tugState.hud = { gold, time, goldPopT0, hold };
   tugModeSetPauseLine(time);
 }
 

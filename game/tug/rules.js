@@ -133,7 +133,11 @@ const PROTO_TUG = {
     },
     towerKillBonus: 0,          // gold for destroying a turret = turret.cost + this + towerKillPerLevel x its level. 2 -> 0 in tug pass 8: a level-0 turret pays its price (4), level 3 pays 7; a tower kill refunds a Tank, it does not fund the next one
     towerKillPerLevel: 1,       // gold per level of the destroyed turret on top (a level-0 turret pays 4 + 0 + 0 = 4, a level-3 turret 4 + 0 + 3 = 7); the attacker's xp share uses the same value
-    perGateDamage: 0            // 2026-10-17 (finish levers): gold to a side for every this many points of gate damage its mobs deal (whole gold; the remainder is banked); 0 = off. The crumble pays nothing
+    perGateDamage: 0,           // 2026-10-17 (finish levers): gold to a side for every this many points of gate damage its mobs deal (whole gold; the remainder is banked); 0 = off. The crumble pays nothing
+    hold: {                     // 2026-10-21 (scout eyes, Baz): on every drip a side also earns perMob x its living mobs in the enemy half (past the lane midline), at most cap; perMob 0 = off. Holding the enemy's side pays, so one unit across is worth sending and a held push compounds
+      perMob: 1,                // gold per living mob of the side in the enemy half, paid on each drip; 0 = off
+      cap: 3                    // the most hold pay one side earns on one drip
+    }
   },
   queue: {
     max: 5,                     // mobs in the queue (all training while parallel, the head only otherwise); a full queue refuses the card
@@ -349,6 +353,7 @@ const PROTO_TUG = {
     reserve: 3,                 // the react bot keeps this much gold back (except to answer a Tank with Imps)
     dumpAt: 12,                 // the react bot spends on an attack from this much gold
     plays: {                    // the "plays" bot (Baz, pass 11: "I don't think it's how a proper AI should work"): its own plan, slow partial eyes
+      skill: null,              // 2026-10-21 (ladder): 0..1, or null. null = the explicit numbers below. A number replaces reactSeconds, reactGapSeconds, waveSeconds, waveJitterSeconds and waveMinGold with a blend of a weak table (0: 8, 12, 28, 8, 10) and a sharp table (1: 1, 1.5, 15, 1, 4) and adds reactChance (0.3 -> 1.0, the chance a due reaction is taken); 0.6 lands near today's values. The game sets it from Difficulty (0.3 / 0.6 / 0.9) and the Gauntlet (per stage); the proto page and run.js leave it null
       openingImps: 2,           // after its first turret it queues this many Imps, then banks for the first wave
       waveSeconds: 20,          // seconds between waves (it banks in between)
       waveJitterSeconds: 3,     // each wave time is waveSeconds +- up to this (match.rng), so it is not a metronome

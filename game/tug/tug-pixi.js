@@ -23,9 +23,10 @@
 // are queued; blocked fades the sprite and mutes the role; a tap calls tugQueueMob(id), and tugPxFlashMob(id), which
 // tug-mode.js calls on a queued mob, flashes the card with classic's flashPixiCard timing). Every tile is the pack's card / cardSelected nine-slice, drawn on every pack.
 // Then it calls tugUpdateHud() (tug-mode.js, which hides classic's rails and HUD numbers and publishes tugState.hud =
-// { gold, time, goldPopT0 }) and draws that HUD in one container on textLayer, shown while tugState.hud exists: the
+// { gold, time, goldPopT0, hold }) and draws that HUD in one container on textLayer, shown while tugState.hud exists: the
 // clock chip top-left ("m:ss" on a card tile), the gold chip bottom-right (a coin and the number centred as a pair,
-// the number popping on change, "gold" under it), and the queue column in the left strip, growing up from the
+// the number popping on change, "gold" under it), the hold chip above the gold chip (a card tile with
+// "+N" and "aggressive" under it, hold = what the next drip adds for mobs in the enemy half; muted at +0, ink above), and the queue column in the left strip, growing up from the
 // player's gate under its "queue" caption: min(queue.max, 5) cells, dock.queue.list head first with the head at the
 // bottom; every training mob (all of them while queue.parallel, else the head) on a cardSelected tile filling
 // bottom-up as it trains, the other queued mobs on card tiles, the empty cells dashed.
@@ -121,6 +122,10 @@ const TUG_PX_GOLD = {
   x: 330, y: 538, width: 80, height: 58, cx: 370, cy: 559,
   coinD: 14, coinRing: 2, gap: 6, size: 26, captionCy: 580, captionSize: 14
 };
+// The hold chip (.plans/ltw-tug-ladder-scout-eyes.md step 8): the gold chip's geometry 6 px above it (number at +21,
+// caption at +42, same sizes), a card tile with "+N" in ink centred on (cx, cy), muted at +0 like a cost you can't
+// afford, and the caption "aggressive" in the muted caption style centred on (cx, captionCy).
+const TUG_PX_HOLD = { x: 330, y: 474, width: 80, height: 58, cx: 370, cy: 495, size: 26, captionCy: 516, captionSize: 14 };
 // The queue column in the left strip, growing up from the player's gate: the caption centred on (captionCx,
 // captionCy); min(queue.max, max) cells, cell k (0 = the head) with its top-left at (x, y0 - pitch * k), size x size.
 // A training mob (every queued mob while queue.parallel, else the head): cardSelected, an accent fill (alpha, inset
@@ -1564,7 +1569,7 @@ function tugPxDashedCell(g, x, y) {
 function tugPxBuildHud(layer) {
   const ink = packColourCss("ink");
   const muted = packColourCss("muted");
-  const H = { root: null, time: null, gold: null, goldCoin: null, goldW: null, goldCaption: null, caption: null, cells: [] };
+  const H = { root: null, time: null, gold: null, goldCoin: null, goldW: null, goldCaption: null, hold: null, holdCaption: null, caption: null, cells: [] };
   H.root = tugPxNoEvents(new PIXI.Container());
   H.root.visible = false;
 
@@ -1581,6 +1586,12 @@ function tugPxBuildHud(layer) {
   H.goldCaption = tugPxNoEvents(jonText("gold", { font: "head", size: G.captionSize, fill: muted }));
   H.goldCaption.position.set(G.cx, G.captionCy);
   H.root.addChild(tugPxTile("card", G.x, G.y, G.width, G.height), H.goldCoin, H.gold, H.goldCaption);
+  const HO = TUG_PX_HOLD;
+  H.hold = tugPxNoEvents(jonText("", { font: "head", size: HO.size, fill: ink }));
+  H.hold.position.set(HO.cx, HO.cy);
+  H.holdCaption = tugPxNoEvents(jonText("aggressive", { font: "head", size: HO.captionSize, fill: muted }));
+  H.holdCaption.position.set(HO.cx, HO.captionCy);
+  H.root.addChild(tugPxTile("card", HO.x, HO.y, HO.width, HO.height), H.hold, H.holdCaption);
 
   const Q = TUG_PX_QUEUE;
   H.caption = tugPxNoEvents(jonText("queue", { font: "head", size: Q.captionSize, fill: muted }));
@@ -1697,6 +1708,13 @@ function tugPxSyncHud(hud) {
     const left = G.cx - (G.coinD + G.gap + goldW) / 2;
     H.goldCoin.position.set(left + G.coinD / 2, G.cy);
     H.gold.position.set(left + G.coinD + G.gap + goldW / 2, G.cy);
+  }
+  // the hold chip: what the next drip adds for mobs in the enemy half (tugUpdateHud's hud.hold), ink while > 0, muted at +0
+  const hold = Number(hud && hud.hold) || 0;
+  tugPxSetText(H.hold, "+" + hold);
+  const holdFill = packColourCss(hold > 0 ? "ink" : "muted");
+  if (H.hold.style.fill !== holdFill) {
+    H.hold.style.fill = holdFill;
   }
 
   const dock = tugState.dock;

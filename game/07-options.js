@@ -167,6 +167,9 @@ function getAIManaBonusPerRound() {
   return Number.isFinite(configuredBonus) ? configuredBonus : AI_MANA_BONUS_PER_ROUND;
 }
 
+// Saved difficulty ids whose Difficulty row went away on 2026-10-21, mapped to the nearest of the three tiers.
+const TUG_DIFFICULTY_ALIAS = { yellow: "red", green: "blue" };
+
 function loadOptions() {
   try {
     const raw = localStorage.getItem(OPTIONS_STORAGE_KEY);
@@ -184,6 +187,8 @@ function loadOptions() {
     if (!AI_DIFFICULTY_SETTINGS[gameOptions.difficulty]) {
       gameOptions.difficulty = DEFAULT_OPTIONS.difficulty;
     }
+    // The Difficulty screen shows three tiers since 2026-10-21; saved picks for the two rows that went away land on the nearest tier.
+    gameOptions.difficulty = TUG_DIFFICULTY_ALIAS[gameOptions.difficulty] || gameOptions.difficulty;
     if (!isPickableArtPack(gameOptions.artPack)) {
       gameOptions.artPack = DEFAULT_OPTIONS.artPack;
     }

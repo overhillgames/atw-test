@@ -231,7 +231,8 @@ function finishMatch() {
   const gauntletRun = state.gauntletRun;
   const isGauntletMatch = Boolean(gauntletRun);
   const isGauntletVictory = Boolean(gauntletRun && state.matchWinner === "player");
-  if (isGauntletMatch) {
+  // only the frontier stage feeds "Current Gauntlet Win %"; a replay of a cleared stage is practice
+  if (isGauntletMatch && gauntletRun.stageIndex === gauntletProgress.unlockedStage) {
     recordCurrentGauntletResult(isGauntletVictory);
   }
   const gauntletAdvanced = isGauntletVictory && advanceGauntletAfterVictory(gauntletRun.stageIndex);
@@ -275,6 +276,9 @@ function continueFromMatchResults() {
   if (!pendingGauntletReturn) {
     return;
   }
+  // a win that moved the frontier walks the orb there (advanceGauntletAfterVictory set the glide); otherwise the map
+  // stays on the stage just played
+  gauntletSelectedStage = pendingGauntletReturn.advanced ? null : pendingGauntletReturn.fromStageIndex;
   pendingGauntletReturn = null;
   setScreen("gauntlet");
   refreshAllUI();

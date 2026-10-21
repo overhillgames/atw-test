@@ -445,7 +445,8 @@ const ProtoBot = (function () {
   // plays (Baz, pass 11: "I don't think it's how a proper AI should work"): an opponent with its own plan and slow,
   // partial eyes. Numbers from match.tug.bot.plays (TUG_PLAYS_DEFAULTS when the block is missing or a leaf is not
   // finite). Memory per side on match.botMemo[side], made on the side's first think. match.rng is drawn only for the
-  // persona (once, on that first think) and each wave's jitter (a banked cycle advances nextWaveAt the same way).
+  // persona (once, on that first think), each wave's jitter (a banked cycle advances nextWaveAt the same way) and, with
+  // a skill set and reactChance below 1, once per due reaction (the miss roll; TUG_PLAYS_SKILL).
   // Breakthrough (plan .plans\ltw-proto-tug-breakthrough.md): it adapts at wave time (a wall and a losing swarm: bank a
   // cycle, then a push; an enemy slot in rubble or no finished enemy turret: Runners ride the wave) and to Tank spam (a
   // bomber kept ready, Heavy picks).
@@ -466,6 +467,14 @@ const ProtoBot = (function () {
     tankSpamCount: 3,          // enemy Tanks noticed within tankSpamWindowSeconds that count as Tank spam
     tankSpamWindowSeconds: 60
   };
+  // The skill dial (plan .plans\ltw-tug-ladder-scout-eyes.md, 2026-10-21): a number at bot.plays.skill (0..1, clamped)
+  // replaces these five knobs with the linear blend weak + (sharp - weak) x skill and sets reactChance (the chance a due
+  // reaction is taken; a miss waits a full reactGapSeconds). null leaves the explicit knobs and reactChance 1, so every
+  // existing seeded match is unchanged. 0.6 lands near today's values (3.8 / 5.7 / 0.72 / 20.2 / 3.8 / 6.4).
+  const TUG_PLAYS_SKILL = {
+    weak: { reactSeconds: 8, reactGapSeconds: 12, reactChance: 0.3, waveSeconds: 28, waveJitterSeconds: 8, waveMinGold: 10 },
+    sharp: { reactSeconds: 1, reactGapSeconds: 1.5, reactChance: 1.0, waveSeconds: 15, waveJitterSeconds: 1, waveMinGold: 4 }
+  };
   const TUG_PLAYS_SETS = {
     swarm: ["imp", "imp", "imp", "wisp"],   // 6 gold; queued in this order so the screen walks ahead of the heavy unit
     siege: ["imp", "imp", "brute", "tank"], // 10 gold
@@ -473,7 +482,8 @@ const ProtoBot = (function () {
   };
   const TUG_PLAYS_EPS = 1e-9; // clock comparisons (the clock is a sum of 1/30 s steps)
 
-  // Every bot.plays number, Number(...)-coerced, falling back to TUG_PLAYS_DEFAULTS when not finite.
+  // Every bot.plays number, Number(...)-coerced, falling back to TUG_PLAYS_DEFAULTS when not finite; then, when
+  // bot.plays.skill is a finite number, the TUG_PLAYS_SKILL blend over its knobs (reactChance 1 otherwise).
   function tugPlaysNums(match) {
     const bot = match.tug && match.tug.bot;
     const src = bot && bot.plays && typeof bot.plays === "object" ? bot.plays : {};
@@ -481,6 +491,12 @@ const ProtoBot = (function () {
     for (const key of Object.keys(TUG_PLAYS_DEFAULTS)) {
       const v = Number(src[key]);
       out[key] = Number.isFinite(v) ? v : TUG_PLAYS_DEFAULTS[key];
+    }
+    out.reactChance = 1;
+    const skill = typeof src.skill === "number" && Number.isFinite(src.skill) ? Math.min(1, Math.max(0, src.skill)) : null;
+    if (skill !== null) {
+      const { weak, sharp } = TUG_PLAYS_SKILL;
+      for (const key of Object.keys(weak)) out[key] = weak[key] + (sharp[key] - weak[key]) * skill;
     }
     return out;
   }
@@ -584,9 +600,23 @@ const ProtoBot = (function () {
 
     // Reactions, at most one per reactGapSeconds; the first that acts stamps lastReactAt and ends the think. One that
     // cannot be afforded (or finds no room) is not a reaction and the think goes on.
-    if (clock - memo.lastReactAt >= N.reactGapSeconds - TUG_PLAYS_EPS) {
+    // Miss roll (skill dial, reactChance < 1 only): when the gap is open and one of 2a-2c wants to act (its condition
+    // without the price or the queue), one match.rng draw; at or above reactChance the bot missed it: nothing is
+    // queued, lastReactAt = clock (a full reactGapSeconds before the next try) and the think goes on. reactChance 1
+    // (skill null) never draws.
+    let reactOpen = clock - memo.lastReactAt >= N.reactGapSeconds - TUG_PLAYS_EPS;
+    const brutesWanted = Math.max(noticedCount(["tank"]), memo.tankSpam ? 1 : 0);
+    if (reactOpen && N.reactChance < 1) {
+      const wanted = brutesWanted > ownCount("brute") ||
+        (noticedCount(["imp", "brute"]) >= N.swarmWanted && ownCount("wisp") < 1) ||
+        (noticedCount(["runner"]) >= 2 && ownTurrets() < N.maxTurrets && tugFirstEmpty(match, side) >= 0);
+      if (wanted && match.rng() >= N.reactChance) {
+        memo.lastReactAt = clock;
+        reactOpen = false;
+      }
+    }
+    if (reactOpen) {
       // (2a) wanted = noticed enemy Tanks, at least 1 while tankSpam; more wanted than own Brutes alive + queued: a Brute.
-      const brutesWanted = Math.max(noticedCount(["tank"]), memo.tankSpam ? 1 : 0);
       if (brutesWanted > ownCount("brute") && SIM.queueMob(match, side, "brute").ok) {
         memo.lastReactAt = clock;
         return;

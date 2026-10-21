@@ -54,6 +54,31 @@ function getGauntletStage(index = gauntletProgress.unlockedStage) {
   return GAUNTLET_STAGES[clamp(index, 0, GAUNTLET_STAGES.length - 1)];
 }
 
+// The stage the map has selected: the frontier unless the player tapped a cleared one. Clamped to the
+// frontier, so a stale selection (after a season reset) can never point past it.
+function getGauntletSelectedStage() {
+  return clamp(
+    Number.isFinite(gauntletSelectedStage) ? gauntletSelectedStage : gauntletProgress.unlockedStage,
+    0,
+    clamp(gauntletProgress.unlockedStage, 0, GAUNTLET_STAGES.length - 1)
+  );
+}
+
+// Select a cleared stage or the frontier. Locked stages are refused. The orb glides from the old pick.
+function selectGauntletStage(index) {
+  const target = Math.floor(Number(index));
+  if (!Number.isFinite(target) || target < 0 || target > gauntletProgress.unlockedStage) {
+    return false;
+  }
+  if (target === getGauntletSelectedStage()) {
+    return false;
+  }
+  gauntletTravelFromStage = getGauntletSelectedStage();
+  gauntletSelectedStage = target;
+  refreshGauntletUI();
+  return true;
+}
+
 function getGauntletStagePercent(stage) {
   return {
     x: stage.x / GAUNTLET_MAP_WIDTH * 100,
@@ -70,7 +95,7 @@ const GAUNTLET_SCROLL_PAD = 64;
 // y extents (map pixels) of the drawn landmarks, which tools/jon-gauntlet-map.py prints: keep the two in step
 const GAUNTLET_LANDMARK_SPANS = [[104, 220], [319, 414], [383, 469], [574, 635], [597, 678], [776, 883], [906, 962], [936, 1029], [1159, 1249], [1205, 1281], [1395, 1492]];
 
-function focusGauntletViewport(stageIndex = gauntletProgress.unlockedStage) {
+function focusGauntletViewport(stageIndex = getGauntletSelectedStage()) {
   if (!gauntletMapTrackEl) {
     return;
   }
@@ -153,7 +178,10 @@ function refreshGauntletUI() {
   if (!gauntletScreenEl) {
     return;
   }
-  const stageIndex = clamp(gauntletProgress.unlockedStage, 0, GAUNTLET_STAGES.length - 1);
+  // frontier = the furthest unlocked stage (sets complete / current / pending); stageIndex = the
+  // selected stage (the orb, the selected fill, Engage and the scroll follow it)
+  const frontier = clamp(gauntletProgress.unlockedStage, 0, GAUNTLET_STAGES.length - 1);
+  const stageIndex = getGauntletSelectedStage();
   const stage = getGauntletStage(stageIndex);
   const stagePercent = getGauntletStagePercent(stage);
   if (gauntletOrbEl) {
@@ -171,11 +199,12 @@ function refreshGauntletUI() {
   }
   if (gauntletMarkerLayerEl) {
     gauntletMarkerLayerEl.innerHTML = GAUNTLET_STAGES.map((item, index) => {
-      const stateName = index < stageIndex ? "complete" : index === stageIndex ? "current" : "pending";
+      const stateName = index < frontier ? "complete" : index === frontier ? "current" : "pending";
+      const selected = index === stageIndex ? " selected" : "";
       const percent = getGauntletStagePercent(item);
       const boss = item.strategy === "boss" ? " boss" : "";
       return `
-        <div class="gauntlet-marker ${stateName} difficulty-${item.difficulty}${boss}" style="left: ${percent.x}%; top: ${percent.y}%;" aria-label="Stage ${index + 1}: ${item.strategy}"><span class="gauntlet-marker-num">${index + 1}</span></div>
+        <div class="gauntlet-marker ${stateName}${selected} difficulty-${item.difficulty}${boss}" data-stage="${index}" style="left: ${percent.x}%; top: ${percent.y}%;" aria-label="Stage ${index + 1}: ${item.strategy}"><span class="gauntlet-marker-num">${index + 1}</span></div>
       `;
     }).join("");
   }
