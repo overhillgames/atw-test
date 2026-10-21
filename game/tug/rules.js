@@ -117,7 +117,9 @@ const PROTO_EVOLVES = {
 // .plans/ltw-proto-tug-mode.md.
 const PROTO_TUG = {
   time: {
-    matchSeconds: 300           // the safety clock: at 0 the higher gate wins, equal = draw; no tiebreaks, no sudden death, no overtime
+    matchSeconds: 300,          // the safety clock: at 0 the higher gate wins, equal = draw while overtime is "draw"; "crumble": at matchSeconds the match goes on and both gates lose crumbleHpPerSecond until one falls
+    overtime: "draw",           // 2026-10-17 (finish levers): "draw" = at matchSeconds the higher gate wins, equal is a draw (today); "crumble" = the walls crumble instead, both gates lose hp every second until one falls
+    crumbleHpPerSecond: 1       // 2026-10-17 (finish levers): hp both gates lose per second once the walls crumble (whole points are taken); read only when overtime is "crumble"
   },
   gold: {
     start: 10,                  // gold both sides start with (no cap)
@@ -130,7 +132,8 @@ const PROTO_TUG = {
       tank: 2                   // gold to the killer's side when a Tank dies. 5 -> 2 (breakthrough, 2026-10-08): what the bomber that killed it cost; pushes stop bankrolling the wall
     },
     towerKillBonus: 0,          // gold for destroying a turret = turret.cost + this + towerKillPerLevel x its level. 2 -> 0 in tug pass 8: a level-0 turret pays its price (4), level 3 pays 7; a tower kill refunds a Tank, it does not fund the next one
-    towerKillPerLevel: 1        // gold per level of the destroyed turret on top (a level-0 turret pays 4 + 0 + 0 = 4, a level-3 turret 4 + 0 + 3 = 7); the attacker's xp share uses the same value
+    towerKillPerLevel: 1,       // gold per level of the destroyed turret on top (a level-0 turret pays 4 + 0 + 0 = 4, a level-3 turret 4 + 0 + 3 = 7); the attacker's xp share uses the same value
+    perGateDamage: 0            // 2026-10-17 (finish levers): gold to a side for every this many points of gate damage its mobs deal (whole gold; the remainder is banked); 0 = off. The crumble pays nothing
   },
   queue: {
     max: 5,                     // mobs in the queue (all training while parallel, the head only otherwise); a full queue refuses the card
@@ -278,7 +281,9 @@ const PROTO_TUG = {
         speed: 90,              // px per second while charging (double its walk), slowed like a walk
         contactPx: 24,          // within this many px of the target it blows up
         kill: false,            // true = the target dies outright; false = it takes charge.dmg instead. true -> false (lane-bands): the bomber wounds, two kill a Tank
-        dmg: 25                 // damage on contact when kill is false (unused at true; kept so the panel has the knob). 40 -> 25 (lane-bands): half a Tank; a Tank that takes one hit walks on at 25
+        dmg: 25,                // damage on contact when kill is false (unused at true; kept so the panel has the knob). 40 -> 25 (lane-bands): half a Tank; a Tank that takes one hit walks on at 25
+        structures: false,      // 2026-10-17 (balance sweep 1): true = an enemy turret (finished; a building one is skipped while turret.buildSafe) or the enemy gate within sightPx also sets off the charge when no listed mob is in sight; it runs at it and blows up for structureDmg. Off: Tanks only (pass 11)
+        structureDmg: 10        // damage of a charge blow on a turret or the gate when structures is on (the Tank blow keeps kill / dmg). 10: four Brutes for a plain turret (40), six for a gate (60)
       }
     },
     wisp: {
@@ -288,7 +293,8 @@ const PROTO_TUG = {
       rate: 1.0,                // Wisp seconds per hit
       reach: 150,               // Wisp reach (px, ranged: on mobs and towers alike). 100 -> 150 in tug pass 11: shoots from afar (a plain turret's 170 still out-reaches it)
       splashPx: 35,             // tug pass 11: a hit on a mob also deals its full damage to every other enemy mob within this many px of the victim (0 = off; towers and the gate never splash)
-      gateReach: 150            // it stops and shoots the gate from this many px (along the lane) before the gate line, like the Runner; 0 = only at the line (2026-10-16: it walked to the line before)
+      gateReach: 150,           // it stops and shoots the gate from this many px (along the lane) before the gate line, like the Runner; 0 = only at the line (2026-10-16: it walked to the line before)
+      structureReach: 150       // reach (px, along the lane) to an enemy turret; reach (mobs) and gateReach (the gate) are separate. 150 = its reach, so nothing changes. 2026-10-17 (worth-relative-soak): a turret at 120 can never reach a Wisp at 150, so Wisp spam is unanswerable; 110 (under the turret) is under test, so a Wisp needs a Tank in front of it to kill a turret
     },
     tank: {
       hp: 50,                   // Tank hp
@@ -309,7 +315,7 @@ const PROTO_TUG = {
   combat: {
     laneBand: true,             // lane-bands (2026-10-08): true = every reach, range and sight in tug (mob to mob, mob to turret, turret and gate gun to mob, Brute sight) is measured along the lane only (|dy|), lateral offset ignored; false = circles. Splash, the Slow chain and the Brute's contact stay circles. Baz: "instead of a range of a circle around them, it needs to be the range of how far ahead of them"
     structureReachMelee: 70,   // a melee mob's reach (px) to a tower; 70 (not 60) so a mob on the lane centre reaches a front slot 60 px off it
-    engagementWidth: 3,         // a target (mob, tower or gate) accepts at most this many attacking mobs; 99 = free stacking (back to pass 2's 3 in tug pass 4)
+    engagementWidth: 99,        // a target (mob, tower or gate) accepts at most this many attacking mobs; 99 = free stacking. 3 -> 99 (2026-10-21, Baz): three attackers per target made a group useless against one unit; every mob that reaches a target now hits it
     columnSpacingPx: 0,         // 0 = off (really off since tug pass 4); > 0: a walking mob stays this far behind an ally further along within 20 px across, at its pace
     projectileSpeedPx: 560      // tower and gate gun shots fly at this many px per second, homing
   },
@@ -358,6 +364,17 @@ const PROTO_TUG = {
       runnersWhenOpen: 2,       // breakthrough: Runners added to a wave when an enemy slot is rubble or the enemy has no finished turret (adaptation 2)
       tankSpamCount: 3,         // breakthrough: enemy Tanks noticed within tankSpamWindowSeconds that count as Tank spam (adaptation 3)
       tankSpamWindowSeconds: 60 // breakthrough: the window (seconds) for tankSpamCount
+    },
+    opportunist: {              // the "opportunist" bot (2026-10-17): the runner's yardstick bot, not the shipped AI; deterministic, full information
+      turretsWanted: 2,         // it keeps this many turrets (building ones count) and rebuilds at the bare price before anything else
+      reserve: 3,               // gold it keeps back on every rule except answering a Tank and the all-in
+      waveAt: 12,               // it banks to this much gold, then sends a set
+      wallPushAt: 20,           // against a wall (2+ finished enemy turrets, or one at wallLevel) with none of their mobs in its half, it banks to this instead of waveAt, then sends one big push
+      openWindowSeconds: 6,    // the all-in (enemy has no finished turret) keeps going this long after the lane closed
+      runnersWhenOpen: 2,       // Runners in an all-in before the Imps
+      wallLevel: 3,             // an enemy finished turret at this level or more is a wall: siege sets, not swarms
+      tankBruteRadius: 150,     // an own Brute this close to an enemy Tank counts as its answer (px)
+      outnumberedBy: 2          // enemy mobs in its half minus its own mobs alive at or above this = trade Imps
     }
   }
 };

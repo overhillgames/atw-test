@@ -18,7 +18,8 @@
 // the Heal rule); a pick (pickUpgrade) takes one rank and tugApplyTraits recomputes every derived stat from the plain
 // turret and the ranks.
 // Mobs move in frame px and fight enemy mobs, turrets (which have hp) and the gate; gate guns; a safety clock (the
-// higher gate wins, equal is a draw). match.tug is the merged number table (PROTO_TUG + rules.tugOverrides) and every
+// higher gate wins, equal is a draw; with time.overtime "crumble" the match goes on instead and both gates lose
+// time.crumbleHpPerSecond until one falls). match.tug is the merged number table (PROTO_TUG + rules.tugOverrides) and every
 // tug branch reads it; tug has its own tower fire, projectiles and statuses, so the shared combat code is classic's and
 // evolves' alone.
 // Positions are kept normalised (x / 420, y / 760) as atw-dev does; anything handed to a drawer is in frame px.
@@ -347,6 +348,7 @@ const ProtoSim = (function () {
       const start = Number(tug.gold.start);
       Object.assign(S, {
         gold: Number.isFinite(start) ? Math.max(0, start) : 0, // no cap
+        gateGoldBank: 0,  // fractional gate-pay progress: gate damage this side's mobs dealt not yet paid as whole gold (gold.perGateDamage)
         build: [],        // the build queue, head first: { defId, remaining (seconds left), seconds (its build time) }
         queued: 0,        // mobs this side put in the queue (a cancelled one counts)
         spawned: 0,       // mobs that left the queue and walked
@@ -402,6 +404,7 @@ const ProtoSim = (function () {
     }
     if (match.tug) {
       // towersDestroyed (above) keeps its meaning in tug: that side's towers lost, here to mob hits
+      const perMob = () => { const o = {}; for (const c of CREEPS) o[c.id] = 0; return o; }; // one counter per mob id (imp, runner, ...)
       Object.assign(match.stats, {
         queued: { player: 0, ai: 0 },     // mobs that side put in its build queue
         spawned: { player: 0, ai: 0 },    // mobs that left that side's queue and walked
@@ -415,12 +418,21 @@ const ProtoSim = (function () {
         gateDamage: { player: 0, ai: 0 }, // gate damage that side dealt
         goldEarned: { player: 0, ai: 0 }, // gold that side earned (kills and drip; a sellRefund refund is not earned)
         goldSpent: { player: 0, ai: 0 },  // gold that side paid for mobs and towers (a cancelled mob's refund comes off it)
+        goldBySource: { player: { mob: 0, turret: 0, gun: 0, gate: 0, drip: 0, other: 0 }, ai: { mob: 0, turret: 0, gun: 0, gate: 0, drip: 0, other: 0 } }, // goldEarned split by who earned it: that side's mobs, turrets, gate gun, gate damage (gold.perGateDamage), the drip (other = a kill with no known source; stays 0)
+        mobDamage: { player: perMob(), ai: perMob() }, // hp that side's mobs of each id took off enemy mobs, turrets and the gate (overkill not counted)
+        mobKillValue: { player: perMob(), ai: perMob() }, // gold the kills of that side's mobs of each id paid: enemy mobs and turrets; turret and gun kills are not a mob's
+        mobGateDamage: { player: perMob(), ai: perMob() }, // gate hp that side's mobs of each id took off the enemy gate
+        mobSpend: { player: perMob(), ai: perMob() },  // gold that side paid for each mob id (a cancelled mob's refund comes off it, like goldSpent)
+        mobQueued: { player: perMob(), ai: perMob() }, // mobs of each id that side queued (a cancelled mob comes off it)
+        mobSoak: { player: perMob(), ai: perMob() }, // raw turret and gun damage that side's mobs of each id took while another of its living mobs was also in the shooter's range (fire drawn away from an ally; the scorecard's soak credit)
         cancelled: { player: 0, ai: 0 },  // queued mobs that side cancelled (cancelMob)
         lostBuilding: { player: 0, ai: 0 }, // that side's towers destroyed while under construction (also in towersDestroyed)
         idleSeconds: 0                    // the longest stretch (s) both sides sat with gold below the cheapest mob and empty queues
       });
       match.idleRun = 0;             // the current such stretch (s)
       match.dripTimer = 0;           // seconds banked toward the next gold.dripSeconds payment (from match start)
+      match.crumbleBank = 0;         // crumble overtime: hp banked toward the next whole point both gates lose (time.crumbleHpPerSecond x dt)
+      match.crumbling = false;       // true once the clock passed time.matchSeconds with time.overtime "crumble"
       match.hits = [];               // the last TUG_HIT_SECONDS of events: { x, y, amount, side, age, kind } (kind "damage": side dealt it; "gold": side earned it)
       addLog(match, `live: ${tugTable.time.matchSeconds} s on the clock, gates ${tugTable.gate.hp}, gold ${tugNum(match.player.gold)}.`);
       return match;
@@ -892,6 +904,8 @@ const ProtoSim = (function () {
     const seconds = Number.isFinite(t) && t > 0 ? t : 0;
     S.gold -= cost;
     match.stats.goldSpent[side] += cost;
+    match.stats.mobSpend[side][def.id] += cost;
+    match.stats.mobQueued[side][def.id] += 1;
     S.build.push({ defId: def.id, remaining: seconds, seconds });
     S.queued += 1;
     match.stats.queued[side] += 1;
@@ -915,6 +929,8 @@ const ProtoSim = (function () {
     const refund = Number.isFinite(cost) && cost > 0 ? cost : 0;
     S.gold += refund;
     match.stats.goldSpent[side] -= refund;
+    match.stats.mobSpend[side][entry.defId] -= refund;
+    match.stats.mobQueued[side][entry.defId] -= 1;
     match.stats.cancelled[side] += 1;
     addLog(match, `${SIDE_LABEL[side]} cancelled ${CREEP_BY_ID[entry.defId].name}${tugGoldNote(refund)}.`);
     return { ok: true, reason: "cancelled" };
@@ -1750,10 +1766,24 @@ const ProtoSim = (function () {
   // xp (tugKillXp).
 
   // A default-table guard (exported); runTug uses the match's own table.
+  // A crumble overtime (time.overtime "crumble") adds the seconds it can last: the full gate at
+  // time.crumbleHpPerSecond, plus one; with overtime "draw" (or a bad rate) nothing changes.
   function tugGuardStepsFor(table) {
     const s = Number(table && table.time ? table.time.matchSeconds : NaN);
-    const seconds = Number.isFinite(s) ? Math.max(0, s) : 0;
+    let seconds = Number.isFinite(s) ? Math.max(0, s) : 0;
+    const rate = tugCrumbleRate(table);
+    const hp = Number(table && table.gate ? table.gate.hp : NaN);
+    if (rate > 0 && Number.isFinite(hp) && hp > 0) seconds += Math.ceil(hp / rate) + 1;
     return Math.round(seconds * 30) + 100; // the whole match at 1/30 plus slack
+  }
+
+  // The crumble rate (hp per second both gates lose after time.matchSeconds): time.crumbleHpPerSecond when
+  // time.overtime is "crumble" and it is a finite number > 0, else 0 (no crumble: the clock ends the match as before).
+  function tugCrumbleRate(table) {
+    const T = table && table.time ? table.time : null;
+    if (!T || T.overtime !== "crumble") return 0;
+    const rate = Number(T.crumbleHpPerSecond);
+    return Number.isFinite(rate) && rate > 0 ? rate : 0;
   }
   const TUG_GUARD_STEPS = tugGuardStepsFor(TUG);
 
@@ -1806,11 +1836,11 @@ const ProtoSim = (function () {
       x,
       y: match.tug.lane.spawnY[side],
       targetKind: null,  // "mob" | "tower" | "gate" | "charge" | null (walking)
-      targetId: null,    // the enemy unit's id, the enemy tower's slot, or null
+      targetId: null,    // the enemy unit's id, the enemy tower's slot, the charging value ("charge"), or null
       attackTimer: 0,    // seconds until this unit may hit again (drains while walking, so contact hits at once)
       lastHitAt: -1,    // match.clock of its last hit (snapshot "attacking")
       attackers: 0,      // enemy mobs attacking it this tick (combat.engagementWidth caps it)
-      charging: null     // tug pass 11: the enemy unit's id this unit is charging (spec.charge, the Brute), else null
+      charging: null     // tug pass 11: what this unit is charging (spec.charge, the Brute): the enemy unit's id, or with charge.structures (2026-10-17) "tower:<slot>" / "gate"; else null
     };
     match.nextUnitId += 1;
     tugPlace(match, unit);
@@ -1950,12 +1980,15 @@ const ProtoSim = (function () {
 
   // A death pays gold once, to the side whose damage took the hp to 0 (killerSide): value = the kill's gold value
   // (gold.perKill for a mob, tugTowerValue for a turret), also put on match.hits as a "gold" event at
-  // the death point. Returns the gold paid (for the log line); the caller logs the kill, then calls tugKillXp.
-  function tugPayKill(match, killerSide, value, x, y) {
+  // the death point. source = who killed ("mob", "turret" or "gun"; anything else counts as "other"), only for
+  // stats.goldBySource. Returns the gold paid (for the log line); the caller logs the kill, then calls tugKillXp.
+  function tugPayKill(match, killerSide, value, x, y, source) {
     const v = Number(value);
     if (!(Number.isFinite(v) && v > 0)) return 0;
     match[killerSide].gold += v;
     match.stats.goldEarned[killerSide] += v;
+    const bucket = match.stats.goldBySource[killerSide];
+    bucket[source in bucket ? source : "other"] += v;
     match.hits.push({ x, y, amount: v, side: killerSide, age: 0, kind: "gold" });
     return v;
   }
@@ -2027,6 +2060,84 @@ const ProtoSim = (function () {
     match.hits = keep;
   }
 
+  // dmg from unit (side's mob) on an enemy tower the caller has checked is still in its slot and hittable: lastHitAt,
+  // mobDamage (capped at the hp it had), a hit marker at the slot; at hp <= 0 it falls (slot null, rubble,
+  // towersDestroyed, lostBuilding, tugTowerValue paid via tugPayKill "mob", log "<name> <verb> … Turret", tugKillXp).
+  // True if it fell. tugHit (verb "destroyed") and the Brute's structure blow (verb "blew up").
+  function tugDamageTower(match, side, unit, slot, tower, dmg, name, verb) {
+    const enemy = other(side);
+    const E = match[enemy];
+    unit.lastHitAt = match.clock;
+    const towerHpBefore = tower.hp;
+    tower.hp -= dmg;
+    match.stats.mobDamage[side][unit.defId] += Math.min(dmg, Math.max(0, towerHpBefore));
+    const p = match.tug.slots[enemy][slot];
+    tugRecordHit(match, p.x, p.y, dmg, side);
+    if (tower.hp <= 0) {
+      E.towers[slot] = null;
+      E.rubble[slot] = tugRubbleSeconds(match);
+      match.stats.towersDestroyed[enemy] += 1;
+      if (tower.building) match.stats.lostBuilding[enemy] += 1;
+      const value = tugTowerValue(match, tower);
+      const paid = tugPayKill(match, side, value, p.x, p.y, "mob");
+      match.stats.mobKillValue[side][unit.defId] += paid;
+      addLog(match, `${SIDE_LABEL[side]} ${name} ${verb} ${SIDE_LABEL[enemy]} ${TUG_TURRET_NAME} L${tower.level} (slot ${slot + 1})${tugGoldNote(paid)}.`);
+      tugKillXp(match, side, value, null);
+      return true;
+    }
+    return false;
+  }
+
+  // Gate pay (2026-10-17, finish levers): gold.perGateDamage > 0 = `dealt` points of gate damage by side's mobs go
+  // into S.gateGoldBank and every perGateDamage points banked pay side 1 whole gold (gold, goldEarned,
+  // goldBySource.gate; the remainder stays banked), with one "gold" event on match.hits at (x, y) for the total, as a
+  // kill does. Off (not a finite number > 0) or nothing dealt = nothing. The crumble never comes here (nobody dealt
+  // it). Returns the gold paid (for the log line).
+  function tugPayGateDamage(match, side, dealt, x, y) {
+    const per = Number(match.tug.gold.perGateDamage);
+    if (!(Number.isFinite(per) && per > 0) || !(dealt > 0)) return 0;
+    const S = match[side];
+    S.gateGoldBank = (Number(S.gateGoldBank) || 0) + dealt;
+    let paid = 0;
+    for (let i = 0; i < 1000 && S.gateGoldBank >= per - 1e-9; i += 1) { // capped: defensive only
+      S.gateGoldBank -= per;
+      S.gold += 1;
+      match.stats.goldEarned[side] += 1;
+      match.stats.goldBySource[side].gate += 1;
+      paid += 1;
+    }
+    if (paid > 0) match.hits.push({ x, y, amount: paid, side, age: 0, kind: "gold" });
+    return paid;
+  }
+
+  // damage from unit (side's mob) on the enemy gate (nothing when it is already at 0): lastHitAt, gate hp (never
+  // below 0) and lives, gateDamage and mobDamage by the hp taken, a hit marker at (unit.x, gate line), gate pay
+  // (tugPayGateDamage; off by default). Log: blow false (tugHit) = "hit the … gate" only on a TUG_GATE_LOG_STEP
+  // crossing or the last hp; blow true (the Brute's structure blow) = "blew up at the … gate" every time; either line
+  // gains " (+N gold)" only when gate pay paid on that hit. Returns the hp taken.
+  function tugDamageGate(match, side, unit, damage, name, blow) {
+    const enemy = other(side);
+    const E = match[enemy];
+    const G = E.gate;
+    if (G.hp <= 0) return 0;
+    unit.lastHitAt = match.clock;
+    const before = G.hp;
+    G.hp = Math.max(0, G.hp - damage);
+    E.lives = G.hp;
+    match.stats.gateDamage[side] += before - G.hp;
+    match.stats.mobDamage[side][unit.defId] += before - G.hp;
+    match.stats.mobGateDamage[side][unit.defId] += before - G.hp;
+    tugRecordHit(match, unit.x, G.y, before - G.hp, side);
+    const paid = tugPayGateDamage(match, side, before - G.hp, unit.x, G.y);
+    const lostSteps = (hp) => Math.floor((G.maxHp - hp) / TUG_GATE_LOG_STEP + 1e-9);
+    if (blow) {
+      addLog(match, `${SIDE_LABEL[side]} ${name} blew up at the ${SIDE_LABEL[enemy]} gate: gate ${tugNum(G.hp)}/${G.maxHp}${tugGoldNote(paid)}.`);
+    } else if (G.hp <= 0 || lostSteps(G.hp) > lostSteps(before)) {
+      addLog(match, `${SIDE_LABEL[side]} ${name} hit the ${SIDE_LABEL[enemy]} gate: gate ${tugNum(G.hp)}/${G.maxHp}${tugGoldNote(paid)}.`);
+    }
+    return before - G.hp;
+  }
+
   // One instant mob hit: mobDmg (when a finite number >= 0, else dmg) on a mob, dmg on a tower, gateDmg (else dmg) on
   // the gate. A target already gone this tick (killed, destroyed or removed by an earlier hit) wastes the hit. The
   // killing blow on an enemy mob pays the hitter's side that mob's gold value; destroying a turret (finished or under
@@ -2036,7 +2147,8 @@ const ProtoSim = (function () {
   // (tugPayKill, tugKillXp). Tug pass 11: a mob with splashPx > 0 (the Wisp) also deals the same damage to every other
   // living enemy mob within splashPx of the victim (victim first, then the others in id order; a victim this hit killed
   // still splashes; never on a tower or the gate). A turret under construction is never hit while turret.buildSafe is on,
-  // except by a mob whose spec has hitsBuilding (the Tank, breakthrough).
+  // except by a mob whose spec has hitsBuilding (the Tank, breakthrough). The tower and gate bodies live in
+  // tugDamageTower / tugDamageGate (balance sweep 1, 2026-10-17: the Brute's structure blow reuses them).
   function tugHit(match, hit) {
     const unit = hit.unit;
     const spec = hit.spec;
@@ -2051,13 +2163,16 @@ const ProtoSim = (function () {
       const dmg = Number.isFinite(spec.mobDmg) && spec.mobDmg >= 0 ? spec.mobDmg : spec.dmg;
       unit.lastHitAt = match.clock;
       const strike = (mob) => {
+        const hpBefore = mob.hp;
         mob.hp -= dmg;
+        match.stats.mobDamage[side][unit.defId] += Math.min(dmg, Math.max(0, hpBefore));
         tugRecordHit(match, mob.x, mob.y, dmg, side);
         if (mob.hp <= 0) {
           mob.isDefeated = true;
           match.stats.mobKills[side] += 1;
           const value = tugMobValue(match, mob.defId);
-          const paid = tugPayKill(match, side, value, mob.x, mob.y);
+          const paid = tugPayKill(match, side, value, mob.x, mob.y, "mob");
+          match.stats.mobKillValue[side][unit.defId] += paid;
           addLog(match, `${SIDE_LABEL[side]} ${name} killed ${SIDE_LABEL[enemy]} ${CREEP_BY_ID[mob.defId].name}${tugGoldNote(paid)}.`);
           tugKillXp(match, side, value, null);
         }
@@ -2078,35 +2193,10 @@ const ProtoSim = (function () {
       const tower = target.tower;
       if (E.towers[target.slot] !== tower) return;
       if (tower.building && tugBuildSafe(match) && !(spec.hitsBuilding === true)) return;
-      unit.lastHitAt = match.clock;
-      tower.hp -= spec.dmg;
-      const p = match.tug.slots[enemy][target.slot];
-      tugRecordHit(match, p.x, p.y, spec.dmg, side);
-      if (tower.hp <= 0) {
-        E.towers[target.slot] = null;
-        E.rubble[target.slot] = tugRubbleSeconds(match);
-        match.stats.towersDestroyed[enemy] += 1;
-        if (tower.building) match.stats.lostBuilding[enemy] += 1;
-        const value = tugTowerValue(match, tower);
-        const paid = tugPayKill(match, side, value, p.x, p.y);
-        addLog(match, `${SIDE_LABEL[side]} ${name} destroyed ${SIDE_LABEL[enemy]} ${TUG_TURRET_NAME} L${tower.level} (slot ${target.slot + 1})${tugGoldNote(paid)}.`);
-        tugKillXp(match, side, value, null);
-      }
+      tugDamageTower(match, side, unit, target.slot, tower, spec.dmg, name, "destroyed");
       return;
     }
-    const G = E.gate;
-    if (G.hp <= 0) return;
-    const damage = Number.isFinite(spec.gateDmg) ? spec.gateDmg : spec.dmg;
-    unit.lastHitAt = match.clock;
-    const before = G.hp;
-    G.hp = Math.max(0, G.hp - damage);
-    E.lives = G.hp;
-    match.stats.gateDamage[side] += before - G.hp;
-    tugRecordHit(match, unit.x, G.y, before - G.hp, side);
-    const lostSteps = (hp) => Math.floor((G.maxHp - hp) / TUG_GATE_LOG_STEP + 1e-9);
-    if (G.hp <= 0 || lostSteps(G.hp) > lostSteps(before)) {
-      addLog(match, `${SIDE_LABEL[side]} ${name} hit the ${SIDE_LABEL[enemy]} gate: gate ${tugNum(G.hp)}/${G.maxHp}.`);
-    }
+    tugDamageGate(match, side, unit, Number.isFinite(spec.gateDmg) ? spec.gateDmg : spec.dmg, name, false);
   }
 
   // Remove the dead (tug has no poison, so every kill was credited when it happened).
@@ -2198,11 +2288,39 @@ const ProtoSim = (function () {
     return targets.length > 0 ? { C, targets } : null;
   }
 
-  // Before the targets are picked: a charging unit whose target is no longer a living enemy unit drops the charge
-  // (back to normal: targetKind null); a living unit with a charge spec that is not charging starts one on the nearest
-  // living enemy unit whose defId is in charge.targets within charge.sightPx (a circle, or along the lane only while
-  // combat.laneBand is on; contact and movement in tugChargeMove stay circles; ties to the lower id). A
-  // charging unit has targetKind "charge" and targetId the target's id, and attacks no one. Player first, then AI.
+  // unit.charging (balance sweep 1, 2026-10-17): an enemy mob's id (a number, as since pass 11), "tower:<slot>" (the
+  // enemy slot index) or "gate"; always truthy. Resolved to { kind: "mob", unit } | { kind: "tower", slot, tower } |
+  // { kind: "gate", gate } with x, y (mob: its position; tower: its slot; gate: (lane.x, gate line)), or null when gone:
+  // a dead mob, an empty slot, a turret under construction while turret.buildSafe (the Brute has no hitsBuilding), a
+  // gate at 0.
+  function tugChargeTarget(match, enemy, charging) {
+    const E = match[enemy];
+    if (typeof charging !== "string") {
+      const unit = findUnitById(match, enemy, charging);
+      return unit && tugAlive(unit) ? { kind: "mob", unit, x: unit.x, y: unit.y } : null;
+    }
+    if (charging === "gate") {
+      const gate = E.gate;
+      return gate && gate.hp > 0 ? { kind: "gate", gate, x: match.tug.lane.x, y: gate.y } : null;
+    }
+    if (charging.indexOf("tower:") === 0) {
+      const slot = Number(charging.slice(6));
+      const tower = E.towers[slot];
+      if (!tower || (tower.building && tugBuildSafe(match))) return null;
+      const p = match.tug.slots[enemy][slot];
+      return { kind: "tower", slot, tower, x: p.x, y: p.y };
+    }
+    return null;
+  }
+
+  // Before the targets are picked: a charging unit whose target is gone (tugChargeTarget null; a structure charge also
+  // while charge.structures is off) drops the charge (back to normal: targetKind null); a living unit with a charge
+  // spec that is not charging starts one on the nearest living enemy unit whose defId is in charge.targets within
+  // charge.sightPx (a circle, or along the lane only while combat.laneBand is on; contact and movement in tugChargeMove
+  // stay circles; ties to the lower id). Only when none is in sight and charge.structures is true: the nearest enemy
+  // turret (finished, or building while buildSafe is off) or the enemy gate (hp > 0) within sightPx, measured the same
+  // way (a tie goes to the lower slot, a turret before the gate). A charging unit has targetKind "charge" and targetId
+  // its charging value, and attacks no one. Player first, then AI.
   function tugChargeSight(match) {
     const laneBand = tugLaneBand(match);
     for (const side of SIDES) {
@@ -2219,10 +2337,11 @@ const ProtoSim = (function () {
           continue;
         }
         if (unit.charging) {
-          const t = findUnitById(match, enemy, unit.charging);
-          if (t && tugAlive(t)) {
+          const off = typeof unit.charging === "string" && cs.C.structures !== true;
+          const t = off ? null : tugChargeTarget(match, enemy, unit.charging);
+          if (t) {
             unit.targetKind = "charge";
-            unit.targetId = t.id;
+            unit.targetId = unit.charging;
             continue;
           }
           unit.charging = null;
@@ -2241,7 +2360,38 @@ const ProtoSim = (function () {
             best = e;
           }
         }
-        if (!best) continue;
+        if (!best) {
+          if (cs.C.structures !== true) continue;
+          let pick = null;
+          const towers = match[enemy].towers;
+          for (let i = 0; i < towers.length; i += 1) {
+            const s = tugChargeTarget(match, enemy, `tower:${i}`);
+            if (!s) continue;
+            const d = tugReachDist(laneBand, unit.x, unit.y, s.x, s.y);
+            if (d <= sight && d < bestDist) {
+              bestDist = d;
+              pick = s;
+            }
+          }
+          const g = tugChargeTarget(match, enemy, "gate");
+          if (g) {
+            const d = tugReachDist(laneBand, unit.x, unit.y, g.x, g.y);
+            if (d <= sight && d < bestDist) {
+              bestDist = d;
+              pick = g;
+            }
+          }
+          if (!pick) continue;
+          const key = pick.kind === "gate" ? "gate" : `tower:${pick.slot}`;
+          unit.charging = key;
+          unit.targetKind = "charge";
+          unit.targetId = key;
+          const what = pick.kind === "gate"
+            ? `the ${SIDE_LABEL[enemy]} gate`
+            : `${SIDE_LABEL[enemy]} ${TUG_TURRET_NAME} L${pick.tower.level} (slot ${pick.slot + 1})`;
+          addLog(match, `${SIDE_LABEL[side]} ${CREEP_BY_ID[unit.defId].name} charges ${what}.`);
+          continue;
+        }
         unit.charging = best.id;
         unit.targetKind = "charge";
         unit.targetId = best.id;
@@ -2250,10 +2400,11 @@ const ProtoSim = (function () {
     }
   }
 
-  // After the hits, before the walkers: each living charging unit (Player first, then AI, list order) whose target is
-  // still alive blows up at once when within charge.contactPx, else runs charge.speed (x slowMove while slowed) x dt
-  // straight at the target's current position (both axes, never past it; no engagement width, columns or gate line),
-  // then blows up if now within contactPx. A target killed earlier this tick leaves the charge to be dropped next tick.
+  // After the hits, before the walkers: each living charging unit (Player first, then AI, list order) whose target
+  // (tugChargeTarget: a mob, a turret's slot, or the gate at (lane.x, gate line)) is still there blows up at once when
+  // within charge.contactPx, else runs charge.speed (x slowMove while slowed) x dt straight at the target's current
+  // position (both axes, never past it; no engagement width, columns or gate line), then blows up if now within
+  // contactPx. A target killed or destroyed earlier this tick leaves the charge to be dropped next tick.
   function tugChargeMove(match, dt) {
     for (const side of SIDES) {
       const enemy = other(side);
@@ -2261,8 +2412,8 @@ const ProtoSim = (function () {
         if (!tugAlive(unit) || !unit.charging) continue;
         const cs = tugChargeSpec(match.tug.mobs[unit.defId]);
         if (!cs) continue;
-        const target = findUnitById(match, enemy, unit.charging);
-        if (!target || !tugAlive(target)) continue;
+        const target = tugChargeTarget(match, enemy, unit.charging);
+        if (!target) continue;
         const contact = Math.max(0, Number(cs.C.contactPx) || 0);
         let d = Math.hypot(target.x - unit.x, target.y - unit.y);
         if (d <= contact) {
@@ -2282,18 +2433,40 @@ const ProtoSim = (function () {
     }
   }
 
-  // Contact: charge.kill true = the target's hp goes to 0; false = it takes charge.dmg. The charger dies either way (no
-  // kill credit, gold, xp or mobKills to anyone). A target that died is the charger side's kill: stats.mobKills, its
-  // gold.perKill (tugPayKill at the target), tugKillXp (null source), log "blew up"; one that survived logs "hit … for".
-  function tugChargeBlow(match, unit, target, C) {
+  // Contact (hit = tugChargeTarget's result). A mob: charge.kill true = the target's hp goes to 0; false = it takes
+  // charge.dmg. The charger dies either way (no kill credit, gold, xp or mobKills to anyone). A target that died is the
+  // charger side's kill: stats.mobKills, its gold.perKill (tugPayKill at the target), tugKillXp (null source), log
+  // "blew up"; one that survived logs "hit … for". A turret or the gate (charge.structures): the charger dies, then
+  // charge.structureDmg through tugDamageTower (a fall logs "blew up", a survivor "hit … for") / tugDamageGate (log
+  // "blew up at the … gate" every blow); mobDamage is counted inside them.
+  function tugChargeBlow(match, unit, hit, C) {
     const side = unit.owner;
     const enemy = other(side);
     const name = CREEP_BY_ID[unit.defId].name;
+    if (hit.kind === "tower") {
+      const dmg = Math.max(0, Number(C.structureDmg) || 0);
+      unit.hp = 0;
+      unit.isDefeated = true;
+      const level = hit.tower.level;
+      if (!tugDamageTower(match, side, unit, hit.slot, hit.tower, dmg, name, "blew up")) {
+        addLog(match, `${SIDE_LABEL[side]} ${name} hit ${SIDE_LABEL[enemy]} ${TUG_TURRET_NAME} L${level} (slot ${hit.slot + 1}) for ${tugNum(dmg)}.`);
+      }
+      return;
+    }
+    if (hit.kind === "gate") {
+      const dmg = Math.max(0, Number(C.structureDmg) || 0);
+      unit.hp = 0;
+      unit.isDefeated = true;
+      tugDamageGate(match, side, unit, dmg, name, true);
+      return;
+    }
+    const target = hit.unit;
     const targetName = CREEP_BY_ID[target.defId].name;
     const hpBefore = target.hp;
     const kill = C.kill !== false;
     const dmg = kill ? hpBefore : Math.max(0, Number(C.dmg) || 0);
     target.hp = kill ? 0 : target.hp - dmg;
+    match.stats.mobDamage[side][unit.defId] += kill ? hpBefore : Math.min(dmg, Math.max(0, hpBefore));
     tugRecordHit(match, target.x, target.y, kill ? hpBefore : dmg, side);
     unit.hp = 0;
     unit.isDefeated = true;
@@ -2301,7 +2474,8 @@ const ProtoSim = (function () {
       target.isDefeated = true;
       match.stats.mobKills[side] += 1;
       const value = tugMobValue(match, target.defId);
-      const paid = tugPayKill(match, side, value, target.x, target.y);
+      const paid = tugPayKill(match, side, value, target.x, target.y, "mob");
+      match.stats.mobKillValue[side][unit.defId] += paid;
       addLog(match, `${SIDE_LABEL[side]} ${name} blew up ${SIDE_LABEL[enemy]} ${targetName}${tugGoldNote(paid)}.`);
       tugKillXp(match, side, value, null);
     } else {
@@ -2384,8 +2558,17 @@ const ProtoSim = (function () {
     return picked;
   }
 
+  // How many living mobs are within range px of from (the same distance test as tugPickShots, no targeting): the soak flag's "was someone else in range".
+  function tugCountInRange(from, enemies, range, band) {
+    let n = 0;
+    for (const e of enemies) {
+      if (tugAlive(e) && tugReachDist(band, from.x, from.y, e.x, e.y) <= range) n += 1;
+    }
+    return n;
+  }
+
   // A homing shot in frame px (tug projectiles never use the normalised fields).
-  function tugSpawnShot(match, from, target, damage, towerId, owner, slow, splashPx, source) {
+  function tugSpawnShot(match, from, target, damage, towerId, owner, slow, splashPx, source, drawn) {
     match.projectiles.push({
       id: match.nextProjectileId,
       x: from.x,
@@ -2401,6 +2584,7 @@ const ProtoSim = (function () {
       slow,        // the turret's slow at fire time (slow trait >= 1) or null
       splashPx,    // > 0: full damage to every enemy mob this close to the target (splash trait >= 1)
       source,      // the turret that fired (its kills earn it xp while it still stands), or null for a gate gun
+      drawn,       // true when another living enemy mob was also in the shooter's range at fire time (a shot that could have gone to someone else): the primary target's soak
       color: source ? tugTurretLook(source).color : TUG_GATE_GUN_COLOR // the shooter's tint at fire time (snapshot)
     });
     match.nextProjectileId += 1;
@@ -2424,7 +2608,8 @@ const ProtoSim = (function () {
         if (tower.cooldown > 1e-9) continue;
         const targets = tugPickShots(slots[i], enemies, tower.range, tower.targets, tower.targeting, tugLaneBand(match));
         if (targets.length === 0) continue;
-        for (const target of targets) tugSpawnShot(match, slots[i], target, tower.dmg, tower.id, side, tower.slow, tower.splashPx, tower);
+        const inRange = tugCountInRange(slots[i], enemies, tower.range, tugLaneBand(match));
+        for (const target of targets) tugSpawnShot(match, slots[i], target, tower.dmg, tower.id, side, tower.slow, tower.splashPx, tower, inRange > targets.length);
         tower.cooldown = tower.rate;
       }
       if (!gun.enabled) continue;
@@ -2433,7 +2618,8 @@ const ProtoSim = (function () {
       const from = { x: T.lane.x, y: T.lane.gateY[side] };
       const targets = tugPickShots(from, enemies, gun.range, 1, "nearest", tugLaneBand(match));
       if (targets.length === 0) continue;
-      tugSpawnShot(match, from, targets[0], gun.dmg, "gate", side, null, 0, null);
+      const inRange = tugCountInRange(from, enemies, gun.range, tugLaneBand(match));
+      tugSpawnShot(match, from, targets[0], gun.dmg, "gate", side, null, 0, null, inRange > 1);
       S.gate.gunCooldown = gun.rate;
     }
   }
@@ -2450,7 +2636,7 @@ const ProtoSim = (function () {
   // none. At 0 hp it is a kill for owner: a turret kill (source earns the xp) or a gun kill (towerId "gate": every
   // turret of owner shares), paid once (tugPayKill, tugKillXp); a mob already dead is never hit again.
   function tugDamageMob(match, victim, raw, towerId, owner, source) {
-    if (!tugAlive(victim) || !(raw > 0)) return;
+    if (!tugAlive(victim) || !(raw > 0)) return 0;
     let damage = raw * counterMultiplier(match, towerId, victim.defId);
     if (towerId !== "gate") damage *= tugTurretDamageTaken(match, victim.defId);
     const hpBefore = victim.hp;
@@ -2463,11 +2649,12 @@ const ProtoSim = (function () {
       match.stats.kills[owner] = (match.stats.kills[owner] || 0) + 1;
       match.stats[gun ? "gunKills" : "towerKills"][owner] += 1;
       const value = tugMobValue(match, victim.defId);
-      const paid = tugPayKill(match, owner, value, victim.x, victim.y);
+      const paid = tugPayKill(match, owner, value, victim.x, victim.y, gun ? "gun" : "turret");
       const killer = gun ? "gate gun" : (towerId === TUG_TURRET_ID ? TUG_TURRET_NAME : towerId);
       addLog(match, `${SIDE_LABEL[owner]} ${killer} killed ${SIDE_LABEL[victim.owner]} ${CREEP_BY_ID[victim.defId].name}${tugGoldNote(paid)}.`);
       tugKillXp(match, owner, value, gun ? null : (source || null));
     }
+    return Math.min(damage, Math.max(0, hpBefore));
   }
 
   // A slow for slow.seconds x fraction (a longer one in force is kept): move speed x slow.move, attack drain x slow.attack.
@@ -2500,7 +2687,8 @@ const ProtoSim = (function () {
   function tugShotHit(match, p, target) {
     const tx = target.x;
     const ty = target.y;
-    tugDamageMob(match, target, p.damage, p.towerId, p.owner, p.source);
+    const taken = tugDamageMob(match, target, p.damage, p.towerId, p.owner, p.source);
+    if (p.drawn && taken > 0) match.stats.mobSoak[target.owner][target.defId] += p.damage;
     const slow = p.slow;
     if (slow) {
       tugApplySlow(target, slow, 1);
@@ -2565,6 +2753,7 @@ const ProtoSim = (function () {
       for (const side of SIDES) {
         match[side].gold += 1;
         match.stats.goldEarned[side] += 1;
+        match.stats.goldBySource[side].drip += 1;
       }
     }
   }
@@ -2687,13 +2876,42 @@ const ProtoSim = (function () {
   }
 
   // At time.matchSeconds the higher gate wins (result.reason "clock"); equal gates are a draw. Nothing else.
-  function tugClockCheck(match) {
+  // time.overtime "crumble" (2026-10-17, finish levers; tugCrumbleRate > 0, else the clock finish above): the match
+  // goes on. The tick the clock reaches matchSeconds logs "Overtime: the walls crumble." once; every later tick banks
+  // rate x dt in match.crumbleBank and each whole point banked takes 1 hp off both gates (never below 0, lives
+  // mirrored; no gold, no gateDamage: nobody dealt it), stopping once a gate is at 0. A gate at 0 ends the match here,
+  // with the same check and reason as stepTug's gate check ("gate"; both at 0 together = a draw).
+  function tugClockCheck(match, dt) {
     if (match.clock < Number(match.tug.time.matchSeconds) - 1e-9) return;
-    finishTug(match, "clock");
+    const rate = tugCrumbleRate(match.tug);
+    if (!(rate > 0)) {
+      finishTug(match, "clock");
+      return;
+    }
+    if (!match.crumbling) {
+      match.crumbling = true;
+      match.crumbleBank = 0;
+      addLog(match, "Overtime: the walls crumble.");
+      return;
+    }
+    match.crumbleBank = (Number(match.crumbleBank) || 0) + rate * (Number(dt) > 0 ? Number(dt) : 0);
+    while (match.crumbleBank >= 1 - 1e-9 && match.player.gate.hp > 0 && match.ai.gate.hp > 0) {
+      match.crumbleBank -= 1;
+      for (const side of SIDES) {
+        const G = match[side].gate;
+        G.hp = Math.max(0, G.hp - 1);
+        match[side].lives = G.hp;
+      }
+    }
+    if (match.player.gate.hp <= 0 || match.ai.gate.hp <= 0) {
+      finishTug(match, "gate");
+      return;
+    }
   }
 
   // A tug tick: hits age, drip, queues, construction and rubble, units, the gate check (a gate at 0 ends the match
-  // before tower fire), tower and gun fire, projectiles, bursts, cleanup, the XP sweep, the idle stretch, then the clock.
+  // before tower fire), tower and gun fire, projectiles, bursts, cleanup, the XP sweep, the idle stretch, then the clock
+  // (and, in a crumble overtime, the crumble).
   function stepTug(match, dt) {
     if (match.phase !== "live") return;
     tugAgeHits(match, dt);
@@ -2712,7 +2930,7 @@ const ProtoSim = (function () {
     tugReadySweep(match);
     tugTrackIdle(match, dt);
     match.clock += dt;
-    tugClockCheck(match);
+    tugClockCheck(match, dt);
   }
 
   // Tug runBattle: steps at 1/30 until the match is over, calling onThink(match) at once and then every

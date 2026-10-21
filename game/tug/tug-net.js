@@ -74,7 +74,7 @@
 
 // ------------------------------------------------------------------------------------- constants and state
 
-const TUG_NET_BUILD = "2026-10-16-b";        // bump whenever sim.js or rules.js changes: only equal builds meet
+const TUG_NET_BUILD = "2026-10-21-a";        // bump whenever sim.js or rules.js changes: only equal builds meet
 const TUG_NET_DELAY_TICKS = 18;              // a tap applies this many ticks later on both clients (0.6 s)
 const TUG_NET_HEARTBEAT_MS = 100;            // my front is published this often (only when it moved)
 const TUG_NET_STALE_MS = 90000;              // a waiting room older than this is skipped (classic's STALE_QUEUE_MS)

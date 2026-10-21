@@ -26,7 +26,8 @@ const ProtoBot = (function () {
     evoGreedy: { greed: 0.7, towerPick: "expensive" },
     evoAllPortal: { greed: 1.0, towerPick: "expensive" },
     evoAllTowers: { greed: 0.0, towerPick: "expensive" },
-    // Tug mode: style react = the reacting bot (see actTugReact). rush / turtle / mixed: greed = chance that a full
+    // Tug mode: style react = the reacting bot (see actTugReact; it answers what crosses into its half and, since 2026-10-17,
+    // pushes a whole set when its lane is quiet and its bank is full). rush / turtle / mixed: greed = chance that a full
     // bank (gold >= 8) goes on a mob rather than a tower, and x0.3 the per-tick chance of an Imp trickle; they upgrade
     // ready towers first. random = pick any affordable legal action, including upgrade picks.
     tugReact: { style: "react" },
@@ -34,11 +35,18 @@ const ProtoBot = (function () {
     tugTurtle: { style: "turtle", greed: 0.25 },
     tugMixed: { style: "mixed", greed: 0.5 },
     tugRandom: { style: "random", greed: 0.5 },
+    // wispRush = the Wisp-spam habit bot (2026-10-17): Rush that buys a Wisp whenever it can afford one, the priciest mob
+    // otherwise; it exists so scorecard line 2 tests Wisp spam on purpose (Rush found it by accident when the Wisp's price
+    // tied the Tank's).
+    tugWispRush: { style: "rush", greed: 0.85, favour: "wisp" },
     // plays = the bot with its own plan (opening, wave rhythm, persona) and slow partial eyes (see actTugPlays).
-    tugPlays: { style: "plays" }
+    tugPlays: { style: "plays" },
+    // opportunist = the yardstick bot: deterministic, full information, plays situations (an open lane, a broke foe, Runners,
+    // a Tank) rather than a persona (see actTugOpportunist). Not the shipped AI.
+    tugOpportunist: { style: "opportunist" }
   };
-  const TUG_STYLES = ["react", "rush", "turtle", "mixed", "random", "plays"];
-  const TUG_STYLE_GREED = { rush: 0.85, turtle: 0.25, mixed: 0.5, random: 0.5, react: 0.5, plays: 0.5 }; // used when params carry no greed
+  const TUG_STYLES = ["react", "rush", "turtle", "mixed", "random", "plays", "opportunist"];
+  const TUG_STYLE_GREED = { rush: 0.85, turtle: 0.25, mixed: 0.5, random: 0.5, react: 0.5, plays: 0.5, opportunist: 0.5 }; // used when params carry no greed
 
   const EVO_TOWER_UPGRADES = ["damage", "rate", "hp", "range"]; // rotation order for tower upgrades
 
@@ -73,7 +81,7 @@ const ProtoBot = (function () {
     if (!TUG_STYLES.includes(style)) throw new Error(`ProtoBot: bad tug style "${style}"`);
     const fallback = TUG_STYLE_GREED[style];
     const greed = Math.min(1, Math.max(0, Number.isFinite(p.greed) ? p.greed : fallback));
-    return { style, greed };
+    return { style, greed, favour: p.favour };
   }
 
   // Spend this prep's mana for `side`: towers from the tower budget, then creeps from the creep budget plus any
@@ -213,8 +221,8 @@ const ProtoBot = (function () {
   // One think tick for `side`, every number from match.tug (the turret price through SIM.tugTowerPrice). Gold is the only
   // currency; mobs go into the build queue (SIM.queueMob), turrets are built by tapping an empty slot
   // (SIM.placeTower(match, side, slot), no type) and ready turrets are levelled (SIM.pickUpgrade).
-  // Styles: react (actTugReact), plays (actTugPlays), rush / turtle / mixed (actTugGreed), random. Only match.rng draws
-  // randomness.
+  // Styles: react (actTugReact), plays (actTugPlays), opportunist (actTugOpportunist, the deterministic full-information
+  // yardstick), rush / turtle / mixed (actTugGreed), random. Only match.rng draws randomness (opportunist and react draw none).
   const TUG_BANK = 8; // rush / turtle / mixed: a bank this full goes on a mob (greed chance) or a turret
   const TUG_PICK_TANK = ["slow", "dmg", "heavy"];       // rule 0: an enemy Tank is alive
   const TUG_PICK_SWARM = ["splash", "multi", "rate"];   // rule 0: 3+ enemy Imps, Brutes or Runners alive
@@ -229,11 +237,12 @@ const ProtoBot = (function () {
   }
 
   function actTug(match, side, params) {
-    const { style, greed } = resolveTugParams(params);
+    const { style, greed, favour } = resolveTugParams(params);
     if (style === "react") actTugReact(match, side);
     else if (style === "plays") actTugPlays(match, side);
+    else if (style === "opportunist") actTugOpportunist(match, side);
     else if (style === "random") actTugRandom(match, side);
-    else actTugGreed(match, side, greed);
+    else actTugGreed(match, side, greed, favour);
   }
 
   function tugQueueRoom(match, S) {
@@ -317,8 +326,9 @@ const ProtoBot = (function () {
 
   // rush / turtle / mixed: rule 0 first, then with gold >= TUG_BANK a greed chance of the most expensive affordable mob
   // (or always, with no empty slot), else a turret in the first empty slot (front first) if gold - cost >= reserve;
-  // otherwise greed x 0.3 chance of an Imp. A full queue skips the mob (the rng draws stay the same).
-  function actTugGreed(match, side, greed) {
+  // otherwise greed x 0.3 chance of an Imp. A full queue skips the mob (the rng draws stay the same). A preset's favour
+  // (tugWispRush: "wisp") is bought instead whenever it is affordable.
+  function actTugGreed(match, side, greed, favour) {
     const S = match[side];
     const rng = match.rng;
     tugPickReady(match, side);
@@ -326,7 +336,8 @@ const ProtoBot = (function () {
     const emptyAny = tugFirstEmpty(match, side);
     if (S.gold >= TUG_BANK) {
       if (rng() < greed || emptyAny < 0) {
-        const def = pickByCost(mobs, "expensive", rng);
+        const fav = favour ? mobs.find((m) => m.id === favour) : undefined;
+        const def = fav || pickByCost(mobs, "expensive", rng);
         if (def) SIM.queueMob(match, side, def.id);
       } else if (tugTurretPrice(match, side, match.tug.bot.reserve) !== null) {
         SIM.placeTower(match, side, emptyAny);
@@ -336,9 +347,13 @@ const ProtoBot = (function () {
     if (rng() < greed * 0.3 && tugQueueRoom(match, S) && S.gold >= match.tug.costs.mob.imp) SIM.queueMob(match, side, "imp");
   }
 
-  // react: the sparring partner. Rule 0 (upgrades, free) first, then one spend per call, rules in order a-e; every spend
-  // except rule a keeps bot.reserve gold back. Deterministic (draws nothing from match.rng).
+  // react: the sparring partner. Rule 0 (upgrades, free) first, then one spend per call (rule d2 queues a whole push set),
+  // rules in order a-e with d2 between d and e; every spend except rule a keeps bot.reserve gold back. Deterministic (draws
+  // nothing from match.rng). Rule d2 (plan .plans\ltw-tug-bots-push.md, 2026-10-17): with a quiet lane and a full bank it
+  // pushes instead of trickling one unit at a time.
   const TUG_MELEE = ["imp", "brute"];
+  const TUG_REACT_PUSH_SIEGE = ["imp", "imp", "wisp", "brute"];  // rule d2, the enemy has a finished turret (8 gold)
+  const TUG_REACT_PUSH_OPEN = ["imp", "imp", "runner", "runner"]; // rule d2, the enemy has no finished turret (6 gold)
   const TUG_TANK_BRUTE_RADIUS = 150;                 // rule a: own Brutes this close to an enemy Tank count as answering it
   const TUG_TANK_BRUTE_WANTED = 1;                   // rule a: Brutes wanted per enemy Tank alive
 
@@ -394,6 +409,20 @@ const ProtoBot = (function () {
 
     // (d) nothing of theirs in our half: a turret in an empty slot.
     if (foeInHalf.length === 0 && buildTurret()) return;
+
+    // (d2) push when the lane is quiet: nothing of theirs in our half and a full bank (dumpAt): queue a whole set this think, in
+    // order, while the price leaves the reserve and the queue has room, stopping at the first refusal (loop capped at
+    // queue.max). The siege set when the enemy has a finished turret (the Wisp out-ranges a sub-150 turret, the Brute answers a
+    // Tank), else the open set. Returns only if something was queued; otherwise falls through to (e). Draws no rng.
+    if (foeInHalf.length === 0 && S.gold >= T.bot.dumpAt) {
+      const set = F.towers.some((t) => t && !t.building) ? TUG_REACT_PUSH_SIEGE : TUG_REACT_PUSH_OPEN;
+      let queued = 0;
+      for (let i = 0; i < set.length && i < T.queue.max; i += 1) {
+        if (!canQueue(set[i], false) || !queue(set[i])) break;
+        queued += 1;
+      }
+      if (queued > 0) return;
+    }
 
     // (e) a full bank: Tank when they have 2 finished turrets (both slots, since two-slots) and fewer than 2 mobs on the lane, else a Brute if none of
     // ours is alive or queued, else a Wisp while the price leaves more than the reserve. Each only while the queue has room.
@@ -634,6 +663,238 @@ const ProtoBot = (function () {
     if (ownTurrets() < N.maxTurrets && memo.nextWaveAt - clock >= N.turretLeadSeconds && buildFront(N.turretKeep)) return;
 
     // (5) otherwise bank.
+  }
+
+  // opportunist (plan .plans\ltw-tug-scorecard-opportunist.md, 2026-10-17): the runner's yardstick bot, not the shipped
+  // AI (the game keeps "plays"). Deterministic (draws nothing from match.rng, so a seed still fixes a match) and FULL
+  // INFORMATION: it reads the whole board (enemy units, turrets, slots, gold, queue). It plays situations, not a persona.
+  // Numbers from match.tug.bot.opportunist (TUG_OPP_DEFAULTS when the block is missing or a leaf is not finite). Memory per
+  // side on match.botMemo[side]. One think: free picks first, then rules in order, each returning after it acts, at most one
+  // spend per think except the all-in (4), rule 5's Imps and rule 9's set (each loop capped at queue.max, breaking on the
+  // first refusal). Rules: 0 picks; 1 opening (a turret, then 2 Imps); 2 home guard (keep turretsWanted turrets, bare
+  // price); 3 answer a Tank (a Brute near it, reserve ignored); 4 lane open (enemy has no finished turret): all in,
+  // Runners then Imps, reserve ignored, kept going openWindowSeconds after it closes; 5 they're broke (no gold, no queue,
+  // nothing in our half) and we have waveAt: push a Tank or Imps; 6 answer Runners in our half (turret, else Imps);
+  // 7 answer 2+ Wisps in our half with a Wisp; 8 outnumbered in the middle: an Imp (7-8 stand down while "banking":
+  // a wall ahead and fewer than wallThreat enemy mobs in our half); 9 wave at waveAt gold (siege set imp, wisp,
+  // brute, tank against a wall (the Wisp out-ranges a sub-150 turret), swarm set otherwise, alternating while they have a turret); wall mode (2+ finished enemy turrets or one at wallLevel,
+  // whatever is in our half): bank to wallPushAt, then the wall-push set imp, imp, wisp, wisp, tank followed by swarm sets
+  // while gold covers them, as one army; 10 bank. Every rule but 3 and 4 keeps the reserve.
+  const TUG_OPP_DEFAULTS = {
+    turretsWanted: 2,     // keep this many turrets (building ones count); rebuild at the bare price before anything else
+    reserve: 3,           // gold kept back by every rule except Tank answers and the all-in
+    waveAt: 12,           // bank to this, then send a set
+    wallPushAt: 20,       // against a wall, bank to this before a push (instead of waveAt)
+    wallThreat: 3,        // against a wall, fewer than this many enemy mobs in our half is a trickle, not a push: bank, don't trade
+    openWindowSeconds: 6, // the all-in keeps going this long after the lane closed, so Runners queued late still ride it
+    runnersWhenOpen: 2,   // Runners in an all-in before the Imps
+    wallLevel: 3,         // an enemy finished turret at this level or more = a wall: send siege sets, not swarms
+    tankBruteRadius: 150, // an own Brute within this of an enemy Tank counts as its answer
+    outnumberedBy: 2      // enemy mobs in our half minus our mobs alive >= this = trade Imps
+  };
+  const TUG_OPP_SWARM = ["imp", "imp", "imp", "wisp"]; // rule 9, against no wall
+  // rule 9, against a wall (11 gold). The Wisp (2026-10-17 reach sweep) out-ranges a sub-150 turret and does the siege.
+  const TUG_OPP_SIEGE = ["imp", "wisp", "brute", "tank"];
+  // rule 9, wall mode (13 gold, sent in order): two Imps screen, two Wisps out-range a sub-150 turret and splash the
+  // escorts, the Tank sieges what the Wisps soften.
+  const TUG_OPP_WALL_PUSH = ["imp", "imp", "wisp", "wisp", "tank"];
+
+  // Every bot.opportunist number, Number(...)-coerced, falling back to TUG_OPP_DEFAULTS when not finite.
+  function tugOppNums(match) {
+    const bot = match.tug && match.tug.bot;
+    const src = bot && bot.opportunist && typeof bot.opportunist === "object" ? bot.opportunist : {};
+    const out = {};
+    for (const key of Object.keys(TUG_OPP_DEFAULTS)) {
+      const v = Number(src[key]);
+      out[key] = Number.isFinite(v) ? v : TUG_OPP_DEFAULTS[key];
+    }
+    return out;
+  }
+
+  function actTugOpportunist(match, side) {
+    const S = match[side];
+    const foe = side === "player" ? "ai" : "player";
+    const F = match[foe];
+    const T = match.tug;
+    const N = tugOppNums(match);
+    const clock = match.clock;
+    const reserve = N.reserve;
+    const cost = (id) => Number(T.costs.mob[id]);
+    const queueMax = Math.floor(Number(T.queue.max));
+    const cap = Number.isFinite(queueMax) ? Math.max(0, queueMax) : 0; // hard cap on every spend loop
+    const queue = (id) => SIM.queueMob(match, side, id).ok;
+
+    // Memory: made once per side.
+    match.botMemo = match.botMemo || {};
+    const fresh = !match.botMemo[side];
+    if (fresh) {
+      match.botMemo[side] = { opened: false, openingImps: 0, laneOpenedAt: null, laneShutAt: null, lastSetKind: null };
+    }
+    const memo = match.botMemo[side];
+    const ownTurrets = () => S.towers.filter((t) => t).length; // finished + under construction
+    const buildFront = (keep) => {
+      const slot = tugFirstEmpty(match, side);
+      return slot >= 0 && tugTurretPrice(match, side, keep) !== null && SIM.placeTower(match, side, slot).ok;
+    };
+    const ownCount = (id) => S.units.filter((u) => tugAliveUnit(u) && u.defId === id).length + S.build.filter((b) => b.defId === id).length;
+
+    // The board, read every think. Our half by the lane midpoint (the plays bot's test).
+    const lane = T.lane;
+    const mid = (Number(lane.gateY.player) + Number(lane.gateY.ai)) / 2;
+    const inOwnHalf = (u) => (side === "player" ? u.y > mid : u.y < mid);
+    const foeAlive = F.units.filter(tugAliveUnit);
+    const ownAlive = S.units.filter(tugAliveUnit);
+    const foeInHalf = foeAlive.filter(inOwnHalf);
+    let foeFinished = 0;
+    let foeTurrets = 0; // finished or under construction
+    let foeMaxLevel = -Infinity;
+    for (const t of F.towers) {
+      if (!t) continue;
+      foeTurrets += 1;
+      if (t.building) continue;
+      foeFinished += 1;
+      const level = Number(t.level);
+      if (Number.isFinite(level) && level > foeMaxLevel) foeMaxLevel = level;
+    }
+    // A wall ahead (2+ finished enemy turrets, or one at wallLevel or more). Against a wall, fewer than wallThreat enemy
+    // mobs in our half is a trickle, not a push: banking = bank for the wall push instead of trading (rules 7-8).
+    const wallAhead = foeFinished >= 2 || foeMaxLevel >= N.wallLevel;
+    const banking = wallAhead && foeInHalf.length < N.wallThreat;
+
+    // The lane window, kept every think (before any rule can return): laneOpenedAt = clock of the first think the lane was
+    // open (no enemy turret at all, finished or building: "both towers are down"; a turret under construction is not an
+    // opening, and at match start both sides are still building); laneShutAt = clock of the first think it stopped being
+    // open; once it has been shut for longer than openWindowSeconds both clear. The all-in runs while the lane is open or
+    // the window is still on.
+    if (foeTurrets === 0) {
+      if (memo.laneOpenedAt === null) memo.laneOpenedAt = clock;
+      memo.laneShutAt = null;
+    } else if (memo.laneOpenedAt !== null) {
+      if (memo.laneShutAt === null) memo.laneShutAt = clock;
+      if (clock - memo.laneShutAt > N.openWindowSeconds + TUG_PLAYS_EPS) {
+        memo.laneOpenedAt = null;
+        memo.laneShutAt = null;
+      }
+    }
+
+    // (0) picks for every ready own turret, by threat (tugChoosePick). Free.
+    tugPickReady(match, side);
+
+    // (1) opening: on the side's first think a turret in the first empty slot (front first) when affordable, else
+    // straight to the Imps; then one Imp per think until 2 are queued; then opened. Owns the think until then.
+    if (!memo.opened) {
+      if (fresh && buildFront(0)) return;
+      if (memo.openingImps < 2) {
+        if (!queue("imp")) return;
+        memo.openingImps += 1;
+      }
+      if (memo.openingImps >= 2) memo.opened = true;
+      return;
+    }
+
+    // (2) home guard: fewer than turretsWanted own turrets (building ones count) and an empty slot: a turret at the bare
+    // price. Rubble is not empty, so a hole waits for its timer.
+    if (ownTurrets() < N.turretsWanted && buildFront(0)) return;
+
+    // (3) answer a Tank: one own Brute per enemy Tank alive. A Brute answers when alive within tankBruteRadius of any
+    // enemy Tank or waiting in the queue. Reserve ignored. (React rule a.)
+    const tanks = foeAlive.filter((u) => u.defId === "tank");
+    if (tanks.length > 0) {
+      const queuedBrutes = S.build.filter((b) => b.defId === "brute").length;
+      const nearBrutes = ownAlive.filter((u) => u.defId === "brute" && tanks.some((t) => Math.hypot(u.x - t.x, u.y - t.y) <= N.tankBruteRadius)).length;
+      if (nearBrutes + queuedBrutes < tanks.length && queue("brute")) return;
+    }
+
+    // (4) the opportunity, lane open: all in. Runners up to runnersWhenOpen (alive + queued count toward it), then Imps
+    // while gold covers one. The only rule that spends below the reserve and more than once per think.
+    if (memo.laneOpenedAt !== null) {
+      let acted = false;
+      for (let i = 0, have = ownCount("runner"); i < cap && have < N.runnersWhenOpen; i += 1) {
+        if (!queue("runner")) break;
+        have += 1;
+        acted = true;
+      }
+      for (let i = 0; i < cap; i += 1) {
+        if (!queue("imp")) break;
+        acted = true;
+      }
+      if (acted) return;
+    }
+
+    // (5) the opportunity, they're broke: enemy gold below its cheapest mob and nothing queued, nothing of theirs in our
+    // half, and we hold waveAt: a Tank if it leaves the reserve, else Imps (up to 3) while the reserve is kept.
+    const cheapest = Math.min(...Object.values(T.costs.mob).map(Number).filter(Number.isFinite));
+    if (F.gold < cheapest && F.build.length === 0 && foeInHalf.length === 0 && S.gold >= N.waveAt) {
+      if (S.gold - cost("tank") >= reserve && queue("tank")) return;
+      let acted = false;
+      for (let i = 0; i < Math.min(3, cap); i += 1) {
+        if (S.gold - cost("imp") < reserve || !queue("imp")) break;
+        acted = true;
+      }
+      if (acted) return;
+    }
+
+    // (6) answer Runners: enemy Runners alive in our half. A turret first when one is wanted and an empty slot is
+    // affordable; else (or when it cannot be paid) one Imp per Runner not yet matched, one per think, reserve kept. A match
+    // is an own Imp alive in our half or queued. Runners at the gate are a threat whatever the count, so this rule does not
+    // stand down while banking (rules 7 and 8 still do).
+    const runnersIn = foeInHalf.filter((u) => u.defId === "runner").length;
+    if (runnersIn >= 1) {
+      if (ownTurrets() < N.turretsWanted && buildFront(reserve)) return;
+      const matched = ownAlive.filter((u) => u.defId === "imp" && inOwnHalf(u)).length + S.build.filter((b) => b.defId === "imp").length;
+      if (runnersIn > matched && S.gold - cost("imp") >= reserve && queue("imp")) return;
+    }
+
+    // (7) answer Wisps: two or more enemy Wisps in our half and none of ours alive or queued: a Wisp, reserve kept.
+    if (!banking && foeInHalf.filter((u) => u.defId === "wisp").length >= 2 && ownCount("wisp") === 0 && S.gold - cost("wisp") >= reserve && queue("wisp")) return;
+
+    // (8) trade in the middle: enemy mobs in our half minus our mobs alive >= outnumberedBy: an Imp, reserve kept.
+    if (!banking && foeInHalf.length - ownAlive.length >= N.outnumberedBy && S.gold - cost("imp") >= reserve && queue("imp")) return;
+
+    // (9) wave: own gold >= waveAt. Against a wall (an enemy finished turret at wallLevel or more) the siege set, else
+    // the swarm set; the same kind twice running while the enemy has a finished turret flips to the other. The set goes
+    // out in order while gold - cost keeps the reserve; the first refusal stops it.
+    // Wall mode (plan .plans\ltw-tug-opportunist-wall-push.md): a wall ahead (2+ finished enemy turrets, or one at
+    // wallLevel or more): bank to wallPushAt (never the waveAt path), then send the wall-push set and keep sending swarm
+    // sets while gold covers each mob with the reserve kept, as one army (capped at queue.max). Rules 6-8 stand down
+    // while banking, so a trickle in our half does not eat the bank.
+    if (wallAhead) {
+      if (S.gold >= N.wallPushAt) {
+        let sent = 0;
+        for (const id of TUG_OPP_WALL_PUSH) {
+          if (sent >= cap || S.gold - cost(id) < reserve || !queue(id)) break;
+          sent += 1;
+        }
+        for (let more = sent >= TUG_OPP_WALL_PUSH.length; more && sent < cap;) {
+          let swarmSent = 0;
+          for (const id of TUG_OPP_SWARM) {
+            if (sent >= cap || S.gold - cost(id) < reserve || !queue(id)) { more = false; break; }
+            sent += 1;
+            swarmSent += 1;
+          }
+          if (swarmSent === 0) more = false;
+        }
+        if (sent > 0) {
+          memo.lastSetKind = "wall";
+          return;
+        }
+      }
+    } else if (S.gold >= N.waveAt) {
+      let kind = foeMaxLevel >= N.wallLevel ? "siege" : "swarm";
+      if (memo.lastSetKind === kind && foeFinished >= 1) kind = kind === "siege" ? "swarm" : "siege";
+      const set = kind === "siege" ? TUG_OPP_SIEGE : TUG_OPP_SWARM;
+      let sent = 0;
+      for (const id of set) {
+        if (sent >= cap || S.gold - cost(id) < reserve || !queue(id)) break;
+        sent += 1;
+      }
+      if (sent > 0) {
+        memo.lastSetKind = kind;
+        return;
+      }
+    }
+
+    // (10) otherwise bank.
   }
 
   // Both sides act each prep (player first), launch, run, until the match is over. Presets by name or params objects.

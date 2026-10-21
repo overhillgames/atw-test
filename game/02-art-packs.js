@@ -54,6 +54,9 @@ function isPickableArtPack(packId) {
 }
 
 function getArtPackSideAssets(pack, side, key) {
+  // Unit sheets must match the pack's own stills: a pack without sheets animates its stills in code, so never borrow the
+  // default pack's (found 2026-10-21 with the Sci-Fi pack wearing Light's fire frames).
+  if (key === "towerFireSheets" || key === "attackerSprites") return pack.sideAssets?.[side]?.[key] || pack[key] || {};
   const fallbackPack = ART_PACKS[DEFAULT_OPTIONS.artPack] || {};
   return pack.sideAssets?.[side]?.[key] || pack[key] || fallbackPack[key] || {};
 }
