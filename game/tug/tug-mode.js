@@ -10,9 +10,9 @@
 // 2026-10-16) and .plans/ltw-tug-pvp-lockstep.md (online lockstep, slice A, 2026-10-13). No card
 // detail panel in tug (tugCardDetailLines is null for every id), no enemy turret selection, no Remove.
 // A classic script sharing the game's global scope, loaded after 19-draw.js, tug/rules.js, tug/sim.js, tug/bot.js and
-// tug/tug-pixi.js and before tug/tug-net.js and 20-main.js. Classic files reach tug only through `state.mode === "tug"`
+// tug/tug-pixi.js and before tug/tug-net.js, tug/tug-log.js (in that order) and 20-main.js. Classic files reach tug only through `state.mode === "tug"`
 // dispatch lines (startNewMatch, resetMatch, updateGame, drawBoard, the slot click, the dock card handlers,
-// buildCardDetailLines, saveMatchStateNow, quitMatchNow); deleting game/tug/, its six script tags, the Tug Online button
+// buildCardDetailLines, saveMatchStateNow, quitMatchNow); deleting game/tug/, its seven script tags, the Tug Online button
 // and those lines removes tug.
 //
 // Online (tugStartMatch with options.net = { roomId, role: "host" | "guest", seed, startAt, opponentName, opponentPack }, from
@@ -47,6 +47,7 @@
 //     and of tugStartMatch, never null after that, never written by tug-pixi.js; rebuilt once more by tugFinish, in
 //     units mode, then not again), hud (the HUD model below; null until the first tugUpdateHud, never written by
 //     tug-pixi.js), over (true once the end was handled),
+//     logInfo ({ kind: "solo" | "gauntlet" | "online", difficulty, stage, skill, pack }, set at start; read only by tug-log.js),
 //     colourFor(dominant) -> "violet" | "red" | "yellow" | "blue" | "green", slotPx(side, i) -> { x, y } frame px }
 // The HUD model (tugState.hud, a new object from every tugUpdateHud that gets past its guard):
 //   { gold: your gold as text ("12", one decimal at most, rounded down), time: m:ss left ("1:44"),
@@ -269,6 +270,7 @@ function tugStartMatch(options = {}) {
     acc: 0,
     nextThink: 0,
     seed,
+    logInfo: { kind: net ? "online" : (state.gauntletRun ? "gauntlet" : "solo"), difficulty: net ? "" : String(state.aiDifficultyOverride || gameOptions.difficulty || ""), stage: !net && state.gauntletRun ? Math.floor(state.gauntletRun.stageIndex) + 1 : 0, skill: Number.isFinite(skill) ? skill : null, pack: typeof activeArtPackId === "string" ? activeArtPackId : "" }, // read by tug-log.js
     mySide: net && net.role === "guest" ? "ai" : "player", // my sim side; the view always shows it as the player side
     net,
     tick: 0, // online: ticks stepped
@@ -537,6 +539,7 @@ function tugFinish() {
   const match = tugState.match;
   const me = tugState.mySide;
   const result = match.result || { winner: "draw", reason: "clock", player: match.player.gate.hp, ai: match.ai.gate.hp };
+  if (typeof tugLogMatch === "function") tugLogMatch("finish", result); // playtest log (tug-log.js), optional
   tugState.over = true;
   state.gameOver = true;
   state.phase = "gameover";
@@ -679,6 +682,7 @@ function tugEndMatch() {
 
 // The quit confirm's Quit (quitMatchNow, before it goes to the menu): the match ends for good, nothing to resume.
 function tugOnQuit() {
+  if (typeof tugLogMatch === "function" && tugState && !tugState.over) tugLogMatch("quit", null); // playtest log (tug-log.js), optional
   state.gauntletRun = null; // a quit Gauntlet battle records no result (neither win nor loss) and leaves the run
   state.hasActiveMatch = false;
   state.gameOver = false;
